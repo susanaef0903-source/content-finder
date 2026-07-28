@@ -105,6 +105,12 @@ uploaded = st.sidebar.file_uploader(
 )
 catalog = load_catalog(uploaded)
 st.sidebar.success(f"Catalog loaded: {len(catalog):,} titles")
+if uploaded is None:
+    st.sidebar.caption(
+        "Built-in data: Netflix's US catalog as of September 2021 "
+        "(Kaggle open dataset). It only includes what Netflix carried "
+        "then — not every title ever made."
+    )
 
 st.sidebar.subheader("Filters")
 type_filter = st.sidebar.multiselect(
@@ -154,7 +160,11 @@ if year_range:
 st.subheader(f"{len(results):,} match{'es' if len(results) != 1 else ''}")
 
 if results.empty:
-    st.info("No matches. Try fewer words, or clear a filter in the sidebar.")
+    st.info(
+        "No matches. Try fewer words, or clear a filter in the sidebar. "
+        "It's also possible the title just isn't in this catalog — "
+        "it only covers what's actually in the loaded data."
+    )
 else:
     preview = results[
         ["title", "type", "release_year", "rating", "duration", "listed_in", "country", "description"]
