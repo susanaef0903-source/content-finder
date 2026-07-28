@@ -25,7 +25,9 @@ st.markdown(
     "<style>"
     ".block-container {padding-top: 2rem;} "
     ".stMarkdown p, .stCaption, label, .stTextInput input, "
-    ".stSelectbox div, .stAlert p {font-size: 1.1rem !important;}"
+    ".stSelectbox div, .stAlert p {font-size: 1.1rem !important;} "
+    ".stTabs button[data-baseweb='tab'] p "
+    "{font-size: 1.3rem !important; font-weight: 600;}"
     "</style>",
     unsafe_allow_html=True,
 )
@@ -111,9 +113,17 @@ st.sidebar.caption("Find any title in the catalog without digging through spread
 uploaded = st.sidebar.file_uploader(
     "Upload your own catalog (CSV)",
     type="csv",
-    help="Optional. Needs the same columns as the default catalog. "
-         "Leave empty to use the real Netflix catalog (8,807 titles).",
+    help="Optional. Leave empty to use the real Netflix catalog "
+         "(8,807 titles).",
 )
+with st.sidebar.expander("What columns should my CSV have?"):
+    st.write(
+        "Any CSV loads, and missing columns simply show up blank. "
+        "For best results use these column names:\n\n"
+        "`title`, `type` (Movie or TV Show), `director`, `cast`, "
+        "`country`, `date_added`, `release_year`, `rating`, "
+        "`duration`, `listed_in` (genres), `description`"
+    )
 catalog = load_catalog(uploaded)
 st.sidebar.success(f"Catalog loaded: {len(catalog):,} titles")
 if uploaded is None:
@@ -152,6 +162,10 @@ st.caption(
 query = st.text_input(
     "Search",
     placeholder="Type what you're looking for, then press Enter",
+)
+st.caption(
+    "Results show two ways: the 📋 Results table scans every match, "
+    "and the 🎯 Title snapshot shows one title's full record."
 )
 
 results = search_catalog(catalog, query.strip())
