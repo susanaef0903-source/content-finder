@@ -19,6 +19,12 @@ SEARCH_COLUMNS = ["title", "listed_in", "description", "country", "director", "c
 
 st.set_page_config(page_title="Content Finder", page_icon="🔎", layout="wide")
 
+# Streamlit leaves a lot of empty space above the title; tighten it.
+st.markdown(
+    "<style>.block-container {padding-top: 2rem;}</style>",
+    unsafe_allow_html=True,
+)
+
 
 @st.cache_data
 def load_catalog(uploaded_file=None) -> pd.DataFrame:
