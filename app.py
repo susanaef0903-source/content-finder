@@ -162,7 +162,7 @@ else:
 
 # ---------------------------------------------------------------- search
 st.title("Content Finder")
-st.markdown(f"#### :blue[Title Catalog: {len(catalog):,}]")
+st.markdown(f"#### :blue[Title Catalog: {len(catalog):,} total]")
 
 query = st.text_input(
     "Search a title, genre, year, country, or keyword. Try "
