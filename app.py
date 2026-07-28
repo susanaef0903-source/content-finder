@@ -27,7 +27,9 @@ st.markdown(
     ".stMarkdown p, .stCaption, label, .stTextInput input, "
     ".stSelectbox div, .stAlert p {font-size: 1.1rem !important;} "
     "[data-testid='stTab'] p "
-    "{font-size: 1.3rem !important; font-weight: 600;}"
+    "{font-size: 1.3rem !important; font-weight: 600;} "
+    ".stTextInput [data-testid='stWidgetLabel'] p "
+    "{font-size: 1.3rem !important;}"
     "</style>",
     unsafe_allow_html=True,
 )
@@ -154,7 +156,7 @@ else:
 
 # ---------------------------------------------------------------- search
 st.title("Content Finder")
-st.markdown(f"#### :blue[{len(catalog):,} catalog titles]")
+st.markdown(f"#### :blue[Title Catalog: {len(catalog):,}]")
 
 query = st.text_input(
     "Search a title, genre, year, country, or keyword. Try "
@@ -162,8 +164,8 @@ query = st.text_input(
     placeholder="Type what you're looking for, then press Enter",
 )
 st.caption(
-    "Results show two ways: the 📋 Results Table scans every match, "
-    "and the 🎯 Title Snapshot shows one title's full record."
+    "Display results in two ways: 📋 Title Table scans every match "
+    "and 🎯 Title Snapshot shows one title's full record."
 )
 
 results = search_catalog(catalog, query.strip())
@@ -200,7 +202,7 @@ else:
         }
     )
     browse_tab, snapshot_tab = st.tabs(
-        ["📋 :blue[Results Table]", "🎯 :violet[Title Snapshot]"]
+        ["📋 :blue[Title Table]", "🎯 :violet[Title Snapshot]"]
     )
 
     # ------------------------------------------------------- browse view
@@ -215,10 +217,9 @@ else:
             )
         with tip_col:
             st.info(
-                "Hover over the table for more tools (top right corner): "
-                "search within results, hide columns, or view full screen. "
-                "For one title's full record, toggle to the Title Snapshot "
-                "tab.",
+                "More tools in the top right corner: search within results, "
+                "hide columns, or view full screen. Need one title's full "
+                "record? Switch to the Title Snapshot tab.",
                 icon="💡",
             )
         st.dataframe(
