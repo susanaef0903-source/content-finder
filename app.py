@@ -37,12 +37,27 @@ def has_value(value) -> bool:
     return str(value).strip().lower() not in ("", "nan", "none")
 
 
+def word_variants(word: str) -> set:
+    """The word plus simple singular/plural forms, so 'comedy' finds 'Comedies'."""
+    variants = {word}
+    if word.endswith("ies") and len(word) > 4:
+        variants.add(word[:-3] + "y")
+    if word.endswith("s") and len(word) > 3:
+        variants.add(word[:-1])
+    if word.endswith("y") and len(word) > 2:
+        variants.add(word[:-1] + "ies")
+    else:
+        variants.add(word + "s")
+    return variants
+
+
 def search_catalog(df: pd.DataFrame, query: str) -> pd.DataFrame:
     """Return rows matching the query, best matches first.
 
     A row matches if every word in the query appears somewhere in its
     searchable columns (title, genre, description, country, people) or
-    equals its release year. Title hits rank above other hits.
+    equals its release year. Singular and plural forms of a word count
+    as the same word. Title hits rank above other hits.
     """
     words = query.lower().split()
     if not words:
@@ -59,7 +74,10 @@ def search_catalog(df: pd.DataFrame, query: str) -> pd.DataFrame:
 
     match_all = pd.Series(True, index=df.index)
     for word in words:
-        match_all &= haystack.str.contains(word, regex=False) | (years == word)
+        word_match = years == word
+        for variant in word_variants(word):
+            word_match |= haystack.str.contains(variant, regex=False)
+        match_all &= word_match
 
     results = df[match_all].copy()
     # Rank: titles that contain the whole query first, then title word hits.
