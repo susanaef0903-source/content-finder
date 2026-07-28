@@ -128,7 +128,10 @@ st.caption(
     "**documentaries norway**, **2023 thriller**, or **payroll**."
 )
 
-query = st.text_input("Search the catalog", placeholder="What are you looking for?")
+query = st.text_input(
+    "Search the catalog",
+    placeholder="Type what you're looking for, then press Enter",
+)
 
 results = search_catalog(catalog, query.strip())
 if type_filter:
