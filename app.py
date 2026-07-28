@@ -115,8 +115,9 @@ st.sidebar.caption("Find any title in the catalog without digging through spread
 uploaded = st.sidebar.file_uploader(
     "Upload your own catalog (CSV)",
     type="csv",
-    help="Optional. Leave empty to use the real Netflix catalog "
-         "(8,807 titles).",
+    help="Optional. Your file temporarily replaces the built-in Netflix "
+         "catalog (8,807 titles) while you browse. Leave empty to use "
+         "the built-in catalog.",
 )
 with st.sidebar.expander("What columns should my CSV have?"):
     st.write(
@@ -127,8 +128,13 @@ with st.sidebar.expander("What columns should my CSV have?"):
         "`duration`, `listed_in` (genres), `description`"
     )
 catalog = load_catalog(uploaded)
-st.sidebar.success(f"Catalog loaded: {len(catalog):,} titles")
-if uploaded is None:
+if uploaded is not None:
+    st.sidebar.info(
+        "Your file has replaced the built-in catalog while you browse. "
+        "Remove it above to switch back.",
+        icon="📄",
+    )
+else:
     st.sidebar.caption(
         "Data source: Netflix's US catalog as of September 2021 "
         "(Kaggle open dataset). It only includes what Netflix carried "
@@ -165,7 +171,9 @@ query = st.text_input(
 )
 st.caption(
     "Display results in two ways: 📋 Title Table scans every match "
-    "and 🎯 Title Snapshot shows one title's full record."
+    "and 🎯 Title Snapshot shows one title's full record. Narrow "
+    "results with the Type, Genre, and Release year filters in the "
+    "left sidebar."
 )
 
 results = search_catalog(catalog, query.strip())
@@ -181,6 +189,10 @@ if year_range:
     results = results[
         results["release_year"].between(year_range[0], year_range[1], inclusive="both")
     ]
+
+# Lives under the Filters section: updates as search and filters narrow
+# the catalog, instead of repeating the total shown in the main panel.
+st.sidebar.success(f"Showing {len(results):,} of {len(catalog):,} titles")
 
 if len(results) != len(catalog):
     st.subheader(f"{len(results):,} match{'es' if len(results) != 1 else ''}")
