@@ -10,7 +10,9 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-SAMPLE_CSV = Path(__file__).parent / "sample_data" / "sample_catalog.csv"
+# Default catalog: the real Kaggle Netflix dataset (8,807 titles, through 2021).
+# The 40-row fictional sample in sample_data/ remains for quick tests.
+DEFAULT_CSV = Path(__file__).parent / "data" / "netflix_titles.csv"
 
 # Columns the search looks through, in order of how people usually ask.
 SEARCH_COLUMNS = ["title", "listed_in", "description", "country", "director", "cast"]
@@ -21,7 +23,7 @@ st.set_page_config(page_title="Content Finder", page_icon="🔎", layout="wide")
 @st.cache_data
 def load_catalog(uploaded_file=None) -> pd.DataFrame:
     """Load the catalog: an uploaded CSV if provided, otherwise the sample."""
-    df = pd.read_csv(uploaded_file if uploaded_file is not None else SAMPLE_CSV)
+    df = pd.read_csv(uploaded_file if uploaded_file is not None else DEFAULT_CSV)
     # Make sure every expected column exists so search never crashes.
     for col in SEARCH_COLUMNS + ["release_year", "rating", "duration", "date_added", "type"]:
         if col not in df.columns:
@@ -80,12 +82,14 @@ def search_catalog(df: pd.DataFrame, query: str) -> pd.DataFrame:
         match_all &= word_match
 
     results = df[match_all].copy()
-    # Rank: titles that contain the whole query first, then title word hits.
-    title = results["title"].fillna("").str.lower()
+    # Rank: exact title first, then titles containing the whole query,
+    # then title word hits.
+    title = results["title"].fillna("").str.lower().str.strip()
     results["_rank"] = 0
     results.loc[title.str.contains(query.lower(), regex=False), "_rank"] = 2
     for word in words:
         results.loc[title.str.contains(word, regex=False), "_rank"] += 1
+    results.loc[title == query.lower(), "_rank"] += 100
     return results.sort_values(["_rank", "title"], ascending=[False, True]).drop(columns="_rank")
 
 
@@ -96,8 +100,8 @@ st.sidebar.caption("Find any title in the catalog without digging through spread
 uploaded = st.sidebar.file_uploader(
     "Upload your own catalog (CSV)",
     type="csv",
-    help="Optional. Needs the same columns as the sample catalog. "
-         "Leave empty to use the built-in StreamVault sample.",
+    help="Optional. Needs the same columns as the built-in catalog. "
+         "Leave empty to use the real Netflix catalog (8,807 titles).",
 )
 catalog = load_catalog(uploaded)
 st.sidebar.success(f"Catalog loaded: {len(catalog):,} titles")
@@ -125,7 +129,7 @@ else:
 st.title("Content Finder")
 st.caption(
     "Type a title, genre, year, country, or keyword — for example "
-    "**documentaries norway**, **2023 thriller**, or **payroll**."
+    "**documentaries norway**, **2021 thriller**, or **korean drama**."
 )
 
 query = st.text_input(
