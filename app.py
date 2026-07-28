@@ -26,7 +26,7 @@ st.markdown(
     ".block-container {padding-top: 2rem;} "
     ".stMarkdown p, .stCaption, label, .stTextInput input, "
     ".stSelectbox div, .stAlert p {font-size: 1.1rem !important;} "
-    ".stTabs button[data-baseweb='tab'] p "
+    "[data-testid='stTab'] p "
     "{font-size: 1.3rem !important; font-weight: 600;}"
     "</style>",
     unsafe_allow_html=True,
