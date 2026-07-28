@@ -30,6 +30,13 @@ def load_catalog(uploaded_file=None) -> pd.DataFrame:
     return df
 
 
+def has_value(value) -> bool:
+    """True if the cell has a real entry — not blank, NaN, or the text 'nan'."""
+    if pd.isna(value):
+        return False
+    return str(value).strip().lower() not in ("", "nan", "none")
+
+
 def search_catalog(df: pd.DataFrame, query: str) -> pd.DataFrame:
     """Return rows matching the query, best matches first.
 
@@ -142,20 +149,27 @@ else:
     left, right = st.columns([2, 1])
     with left:
         st.markdown(f"### {row['title']}")
-        st.write(row["description"])
-        if str(row.get("director", "")).strip():
+        if has_value(row["description"]):
+            st.write(row["description"])
+        if has_value(row.get("director")):
             st.write(f"**Director:** {row['director']}")
-        if str(row.get("cast", "")).strip():
+        if has_value(row.get("cast")):
             st.write(f"**Cast:** {row['cast']}")
     with right:
         year = row["release_year"]
         st.metric("Release year", int(year) if pd.notna(year) else "—")
-        st.write(f"**Type:** {row['type']}")
-        st.write(f"**Rating:** {row['rating']}")
-        st.write(f"**Length:** {row['duration']}")
-        st.write(f"**Genre:** {row['listed_in']}")
-        st.write(f"**Country:** {row['country']}")
-        st.write(f"**Added to catalog:** {row['date_added']}")
+        if has_value(row["type"]):
+            st.write(f"**Type:** {row['type']}")
+        if has_value(row["rating"]):
+            st.write(f"**Rating:** {row['rating']}")
+        if has_value(row["duration"]):
+            st.write(f"**Length:** {row['duration']}")
+        if has_value(row["listed_in"]):
+            st.write(f"**Genre:** {row['listed_in']}")
+        if has_value(row["country"]):
+            st.write(f"**Country:** {row['country']}")
+        if has_value(row["date_added"]):
+            st.write(f"**Added to catalog:** {row['date_added']}")
 
     # ------------------------------------------------------- report
     st.download_button(
