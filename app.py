@@ -29,7 +29,18 @@ st.markdown(
     "[data-testid='stTab'] p "
     "{font-size: 1.3rem !important; font-weight: 600;} "
     ".stTextInput [data-testid='stWidgetLabel'] p "
-    "{font-size: 1.3rem !important;}"
+    "{font-size: 1.3rem !important;} "
+    # On phones, desktop-sized type eats the screen: shrink headings and
+    # text, and tighten padding. Desktop rules above stay untouched.
+    "@media (max-width: 640px) {"
+    "  h1 {font-size: 1.7rem !important;} "
+    "  h4 {font-size: 1.05rem !important;} "
+    "  .block-container {padding-top: 1rem !important; padding-bottom: 2rem !important;} "
+    "  .stMarkdown p, .stCaption, label, .stTextInput input, "
+    "  .stSelectbox div, .stAlert p {font-size: 0.95rem !important;} "
+    "  .stTextInput [data-testid='stWidgetLabel'] p {font-size: 1.05rem !important;} "
+    "  [data-testid='stTab'] p {font-size: 1.05rem !important;} "
+    "}"
     "</style>",
     unsafe_allow_html=True,
 )
