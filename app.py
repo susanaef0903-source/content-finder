@@ -176,6 +176,12 @@ else:
         }
     )
     st.dataframe(preview, use_container_width=True, hide_index=True)
+    st.download_button(
+        "⬇️ Download these results as a report (CSV)",
+        results.to_csv(index=False).encode("utf-8"),
+        file_name="content-finder-report.csv",
+        mime="text/csv",
+    )
 
     # ------------------------------------------------------- detail view
     st.subheader("Title details")
@@ -205,11 +211,3 @@ else:
             st.write(f"**Country:** {row['country']}")
         if has_value(row["date_added"]):
             st.write(f"**Added to catalog:** {row['date_added']}")
-
-    # ------------------------------------------------------- report
-    st.download_button(
-        "⬇️ Download these results as a report (CSV)",
-        results.to_csv(index=False).encode("utf-8"),
-        file_name="content-finder-report.csv",
-        mime="text/csv",
-    )
