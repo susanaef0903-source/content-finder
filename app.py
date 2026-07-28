@@ -106,16 +106,16 @@ st.sidebar.caption("Find any title in the catalog without digging through spread
 uploaded = st.sidebar.file_uploader(
     "Upload your own catalog (CSV)",
     type="csv",
-    help="Optional. Needs the same columns as the built-in catalog. "
+    help="Optional. Needs the same columns as the default catalog. "
          "Leave empty to use the real Netflix catalog (8,807 titles).",
 )
 catalog = load_catalog(uploaded)
 st.sidebar.success(f"Catalog loaded: {len(catalog):,} titles")
 if uploaded is None:
     st.sidebar.caption(
-        "Built-in data: Netflix's US catalog as of September 2021 "
+        "Data source: Netflix's US catalog as of September 2021 "
         "(Kaggle open dataset). It only includes what Netflix carried "
-        "then — not every title ever made."
+        "then, not every title ever made."
     )
 
 st.sidebar.subheader("Filters")
@@ -140,12 +140,12 @@ else:
 # ---------------------------------------------------------------- search
 st.title("Content Finder")
 st.caption(
-    "Type a title, genre, year, country, or keyword — for example "
+    "Type a title, genre, year, country, or keyword. Try "
     "**documentaries norway**, **2021 thriller**, or **korean drama**."
 )
 
 query = st.text_input(
-    "Search the catalog",
+    "Search",
     placeholder="Type what you're looking for, then press Enter",
 )
 
@@ -168,8 +168,8 @@ st.subheader(f"{len(results):,} match{'es' if len(results) != 1 else ''}")
 if results.empty:
     st.info(
         "No matches. Try fewer words, or clear a filter in the sidebar. "
-        "It's also possible the title just isn't in this catalog — "
-        "it only covers what's actually in the loaded data."
+        "It's also possible the title just isn't in this catalog. "
+        "It only covers what's actually in the loaded data."
     )
 else:
     preview = results[
@@ -195,8 +195,8 @@ else:
             )
         with tip_col:
             st.info(
-                "Hover over the results table for more tools — search within "
-                "results, hide columns, or go fullscreen.",
+                "Hover over the results table for more tools: search within "
+                "results, hide columns, or view fullscreen.",
                 icon="💡",
             )
         st.dataframe(preview, use_container_width=True, hide_index=True)
@@ -204,11 +204,15 @@ else:
     # ------------------------------------------------------- snapshot view
     with snapshot_tab:
         st.caption(
-            "Know which title you're after? Pick it below — or click the box "
-            "and start typing to jump straight to it — and get the full "
-            "record: description, credits, and catalog info."
+            "Know which title you're after? Click the box below and start "
+            "typing to jump straight to it, and get the full record: "
+            "description, credits, and catalog info."
         )
-        chosen = st.selectbox("Select a title to see its full record", results["title"].tolist())
+        chosen = st.selectbox(
+            f"Type a title, or open the list to browse all "
+            f"{len(results):,} match{'es' if len(results) != 1 else ''}",
+            results["title"].tolist(),
+        )
         row = results[results["title"] == chosen].iloc[0]
         left, right = st.columns([2, 1])
         with left:
