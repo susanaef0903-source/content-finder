@@ -181,52 +181,56 @@ else:
             "country": "Country", "description": "Preview",
         }
     )
-    action_col, tip_col = st.columns([1, 2])
-    with action_col:
-        st.download_button(
-            "⬇️ Download these results as a report (CSV)",
-            results.to_csv(index=False).encode("utf-8"),
-            file_name="content-finder-report.csv",
-            mime="text/csv",
-        )
-    with tip_col:
-        st.info(
-            "Hover over the results table for more tools — search within "
-            "results, hide columns, or go fullscreen.",
-            icon="💡",
-        )
-    st.dataframe(preview, use_container_width=True, hide_index=True)
+    browse_tab, snapshot_tab = st.tabs(["📋 Results table", "🎯 Title snapshot"])
 
-    # ------------------------------------------------------- detail view
-    st.divider()
-    st.subheader("Title details")
-    st.caption(
-        "The table above previews every match. Pick one title here to "
-        "see its complete record — description, credits, and catalog info."
-    )
-    chosen = st.selectbox("Select a title to see its full record", results["title"].tolist())
-    row = results[results["title"] == chosen].iloc[0]
-    left, right = st.columns([2, 1])
-    with left:
-        st.markdown(f"### {row['title']}")
-        if has_value(row["description"]):
-            st.write(row["description"])
-        if has_value(row.get("director")):
-            st.write(f"**Director:** {row['director']}")
-        if has_value(row.get("cast")):
-            st.write(f"**Cast:** {row['cast']}")
-    with right:
-        year = row["release_year"]
-        st.metric("Release year", int(year) if pd.notna(year) else "—")
-        if has_value(row["type"]):
-            st.write(f"**Type:** {row['type']}")
-        if has_value(row["rating"]):
-            st.write(f"**Rating:** {row['rating']}")
-        if has_value(row["duration"]):
-            st.write(f"**Length:** {row['duration']}")
-        if has_value(row["listed_in"]):
-            st.write(f"**Genre:** {row['listed_in']}")
-        if has_value(row["country"]):
-            st.write(f"**Country:** {row['country']}")
-        if has_value(row["date_added"]):
-            st.write(f"**Added to catalog:** {row['date_added']}")
+    # ------------------------------------------------------- browse view
+    with browse_tab:
+        action_col, tip_col = st.columns([1, 2])
+        with action_col:
+            st.download_button(
+                "⬇️ Download these results as a report (CSV)",
+                results.to_csv(index=False).encode("utf-8"),
+                file_name="content-finder-report.csv",
+                mime="text/csv",
+            )
+        with tip_col:
+            st.info(
+                "Hover over the results table for more tools — search within "
+                "results, hide columns, or go fullscreen.",
+                icon="💡",
+            )
+        st.dataframe(preview, use_container_width=True, hide_index=True)
+
+    # ------------------------------------------------------- snapshot view
+    with snapshot_tab:
+        st.caption(
+            "Know which title you're after? Pick it below — or click the box "
+            "and start typing to jump straight to it — and get the full "
+            "record: description, credits, and catalog info."
+        )
+        chosen = st.selectbox("Select a title to see its full record", results["title"].tolist())
+        row = results[results["title"] == chosen].iloc[0]
+        left, right = st.columns([2, 1])
+        with left:
+            st.markdown(f"### {row['title']}")
+            if has_value(row["description"]):
+                st.write(row["description"])
+            if has_value(row.get("director")):
+                st.write(f"**Director:** {row['director']}")
+            if has_value(row.get("cast")):
+                st.write(f"**Cast:** {row['cast']}")
+        with right:
+            year = row["release_year"]
+            st.metric("Release year", int(year) if pd.notna(year) else "—")
+            if has_value(row["type"]):
+                st.write(f"**Type:** {row['type']}")
+            if has_value(row["rating"]):
+                st.write(f"**Rating:** {row['rating']}")
+            if has_value(row["duration"]):
+                st.write(f"**Length:** {row['duration']}")
+            if has_value(row["listed_in"]):
+                st.write(f"**Genre:** {row['listed_in']}")
+            if has_value(row["country"]):
+                st.write(f"**Country:** {row['country']}")
+            if has_value(row["date_added"]):
+                st.write(f"**Added to catalog:** {row['date_added']}")
