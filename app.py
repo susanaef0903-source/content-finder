@@ -181,17 +181,21 @@ else:
             "country": "Country", "description": "Preview",
         }
     )
+    action_col, tip_col = st.columns([1, 2])
+    with action_col:
+        st.download_button(
+            "⬇️ Download these results as a report (CSV)",
+            results.to_csv(index=False).encode("utf-8"),
+            file_name="content-finder-report.csv",
+            mime="text/csv",
+        )
+    with tip_col:
+        st.info(
+            "Hover over the results table for more tools — search within "
+            "results, hide columns, or go fullscreen.",
+            icon="💡",
+        )
     st.dataframe(preview, use_container_width=True, hide_index=True)
-    st.caption(
-        "Tip: hover over the table for built-in tools — search within "
-        "these results, hide columns, or view fullscreen."
-    )
-    st.download_button(
-        "⬇️ Download these results as a report (CSV)",
-        results.to_csv(index=False).encode("utf-8"),
-        file_name="content-finder-report.csv",
-        mime="text/csv",
-    )
 
     # ------------------------------------------------------- detail view
     st.divider()
