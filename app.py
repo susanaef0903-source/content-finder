@@ -176,6 +176,10 @@ else:
         }
     )
     st.dataframe(preview, use_container_width=True, hide_index=True)
+    st.caption(
+        "Tip: hover over the table for built-in tools — search within "
+        "these results, hide columns, or view fullscreen."
+    )
     st.download_button(
         "⬇️ Download these results as a report (CSV)",
         results.to_csv(index=False).encode("utf-8"),
@@ -184,7 +188,12 @@ else:
     )
 
     # ------------------------------------------------------- detail view
+    st.divider()
     st.subheader("Title details")
+    st.caption(
+        "The table above previews every match. Pick one title here to "
+        "see its complete record — description, credits, and catalog info."
+    )
     chosen = st.selectbox("Select a title to see its full record", results["title"].tolist())
     row = results[results["title"] == chosen].iloc[0]
     left, right = st.columns([2, 1])
