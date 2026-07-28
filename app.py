@@ -177,15 +177,13 @@ if results.empty:
         "It only covers what's actually in the loaded data."
     )
 else:
-    # The table is for scanning facts; descriptions never fit a one-line
-    # cell, so they live in the Title snapshot tab instead.
     preview = results[
-        ["title", "type", "release_year", "rating", "duration", "listed_in", "country"]
+        ["title", "type", "release_year", "rating", "duration", "listed_in", "country", "description"]
     ].rename(
         columns={
             "title": "Title", "type": "Type", "release_year": "Year",
             "rating": "Rating", "duration": "Length", "listed_in": "Genre",
-            "country": "Country",
+            "country": "Country", "description": "Description",
         }
     )
     browse_tab, snapshot_tab = st.tabs(["📋 Results table", "🎯 Title snapshot"])
@@ -202,12 +200,22 @@ else:
             )
         with tip_col:
             st.info(
-                "Full descriptions are in the Title snapshot tab. Hover over "
-                "the table for more tools: search within results, hide "
-                "columns, or view fullscreen.",
+                "Hover over the table for more tools: search within results, "
+                "hide columns, or view fullscreen. Full records are in the "
+                "Title snapshot tab.",
                 icon="💡",
             )
-        st.dataframe(preview, use_container_width=True, hide_index=True)
+        st.dataframe(
+            preview,
+            use_container_width=True,
+            hide_index=True,
+            row_height=85,
+            column_config={
+                "Description": st.column_config.TextColumn(
+                    "Description", width="large"
+                ),
+            },
+        )
 
     # ------------------------------------------------------- snapshot view
     with snapshot_tab:
