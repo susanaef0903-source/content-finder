@@ -186,12 +186,13 @@ else:
             "country": "Country", "description": "Preview",
         }
     )
-    # Keep previews to one readable line; the full text lives in the
-    # Title snapshot tab.
+    # Keep previews short enough that the ellipsis is visible inside the
+    # column instead of the text clipping at the cell edge; the full
+    # description lives in the Title snapshot tab.
     preview["Preview"] = preview["Preview"].fillna("").astype(str)
-    long_preview = preview["Preview"].str.len() > 120
+    long_preview = preview["Preview"].str.len() > 60
     preview.loc[long_preview, "Preview"] = (
-        preview.loc[long_preview, "Preview"].str.slice(0, 117) + "..."
+        preview.loc[long_preview, "Preview"].str.slice(0, 57) + "..."
     )
     browse_tab, snapshot_tab = st.tabs(["📋 Results table", "🎯 Title snapshot"])
 
