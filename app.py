@@ -20,8 +20,13 @@ SEARCH_COLUMNS = ["title", "listed_in", "description", "country", "director", "c
 st.set_page_config(page_title="Content Finder", page_icon="🔎", layout="wide")
 
 # Streamlit leaves a lot of empty space above the title; tighten it.
+# Also bump the base text size, which defaults too small to read easily.
 st.markdown(
-    "<style>.block-container {padding-top: 2rem;}</style>",
+    "<style>"
+    ".block-container {padding-top: 2rem;} "
+    ".stMarkdown p, .stCaption, label, .stTextInput input, "
+    ".stSelectbox div, .stAlert p {font-size: 1.1rem !important;}"
+    "</style>",
     unsafe_allow_html=True,
 )
 
@@ -181,6 +186,13 @@ else:
             "country": "Country", "description": "Preview",
         }
     )
+    # Keep previews to one readable line; the full text lives in the
+    # Title snapshot tab.
+    preview["Preview"] = preview["Preview"].fillna("").astype(str)
+    long_preview = preview["Preview"].str.len() > 120
+    preview.loc[long_preview, "Preview"] = (
+        preview.loc[long_preview, "Preview"].str.slice(0, 117) + "..."
+    )
     browse_tab, snapshot_tab = st.tabs(["📋 Results table", "🎯 Title snapshot"])
 
     # ------------------------------------------------------- browse view
@@ -199,7 +211,18 @@ else:
                 "results, hide columns, or view fullscreen.",
                 icon="💡",
             )
-        st.dataframe(preview, use_container_width=True, hide_index=True)
+        st.dataframe(
+            preview,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Preview": st.column_config.TextColumn(
+                    "Preview",
+                    width="large",
+                    help="A short teaser. Open the Title snapshot tab for the full description.",
+                ),
+            },
+        )
 
     # ------------------------------------------------------- snapshot view
     with snapshot_tab:
@@ -212,6 +235,10 @@ else:
             f"Type a title, or open the list to browse all "
             f"{len(results):,} match{'es' if len(results) != 1 else ''}",
             results["title"].tolist(),
+        )
+        st.caption(
+            "This box has its own quick search: click it and start typing, "
+            "and the list narrows to matching titles as you type."
         )
         row = results[results["title"] == chosen].iloc[0]
         left, right = st.columns([2, 1])
