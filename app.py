@@ -177,22 +177,16 @@ if results.empty:
         "It only covers what's actually in the loaded data."
     )
 else:
+    # The table is for scanning facts; descriptions never fit a one-line
+    # cell, so they live in the Title snapshot tab instead.
     preview = results[
-        ["title", "type", "release_year", "rating", "duration", "listed_in", "country", "description"]
+        ["title", "type", "release_year", "rating", "duration", "listed_in", "country"]
     ].rename(
         columns={
             "title": "Title", "type": "Type", "release_year": "Year",
             "rating": "Rating", "duration": "Length", "listed_in": "Genre",
-            "country": "Country", "description": "Preview",
+            "country": "Country",
         }
-    )
-    # Keep previews short enough that the ellipsis is visible inside the
-    # column instead of the text clipping at the cell edge; the full
-    # description lives in the Title snapshot tab.
-    preview["Preview"] = preview["Preview"].fillna("").astype(str)
-    long_preview = preview["Preview"].str.len() > 60
-    preview.loc[long_preview, "Preview"] = (
-        preview.loc[long_preview, "Preview"].str.slice(0, 57) + "..."
     )
     browse_tab, snapshot_tab = st.tabs(["📋 Results table", "🎯 Title snapshot"])
 
@@ -208,22 +202,12 @@ else:
             )
         with tip_col:
             st.info(
-                "Hover over the results table for more tools: search within "
-                "results, hide columns, or view fullscreen.",
+                "Full descriptions are in the Title snapshot tab. Hover over "
+                "the table for more tools: search within results, hide "
+                "columns, or view fullscreen.",
                 icon="💡",
             )
-        st.dataframe(
-            preview,
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "Preview": st.column_config.TextColumn(
-                    "Preview",
-                    width="large",
-                    help="A short teaser. Open the Title snapshot tab for the full description.",
-                ),
-            },
-        )
+        st.dataframe(preview, use_container_width=True, hide_index=True)
 
     # ------------------------------------------------------- snapshot view
     with snapshot_tab:
