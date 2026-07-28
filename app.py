@@ -154,18 +154,16 @@ else:
 
 # ---------------------------------------------------------------- search
 st.title("Content Finder")
-st.caption(
-    "Type a title, genre, year, country, or keyword. Try "
-    "**documentaries norway**, **2021 thriller**, or **korean drama**."
-)
+st.markdown(f"#### :blue[{len(catalog):,} catalog titles]")
 
 query = st.text_input(
-    "Search",
+    "Search a title, genre, year, country, or keyword. Try "
+    "**documentaries norway**, **2021 thriller**, or **korean drama**.",
     placeholder="Type what you're looking for, then press Enter",
 )
 st.caption(
-    "Results show two ways: the 📋 Results table scans every match, "
-    "and the 🎯 Title snapshot shows one title's full record."
+    "Results show two ways: the 📋 Results Table scans every match, "
+    "and the 🎯 Title Snapshot shows one title's full record."
 )
 
 results = search_catalog(catalog, query.strip())
@@ -182,7 +180,8 @@ if year_range:
         results["release_year"].between(year_range[0], year_range[1], inclusive="both")
     ]
 
-st.subheader(f"{len(results):,} match{'es' if len(results) != 1 else ''}")
+if len(results) != len(catalog):
+    st.subheader(f"{len(results):,} match{'es' if len(results) != 1 else ''}")
 
 if results.empty:
     st.info(
@@ -200,7 +199,9 @@ else:
             "country": "Country", "description": "Description",
         }
     )
-    browse_tab, snapshot_tab = st.tabs(["📋 Results table", "🎯 Title snapshot"])
+    browse_tab, snapshot_tab = st.tabs(
+        ["📋 :blue[Results Table]", "🎯 :violet[Title Snapshot]"]
+    )
 
     # ------------------------------------------------------- browse view
     with browse_tab:
@@ -214,9 +215,10 @@ else:
             )
         with tip_col:
             st.info(
-                "Hover over the table for more tools: search within results, "
-                "hide columns, or view fullscreen. Full records are in the "
-                "Title snapshot tab.",
+                "Hover over the table for more tools (top right corner): "
+                "search within results, hide columns, or view full screen. "
+                "For one title's full record, toggle to the Title Snapshot "
+                "tab.",
                 icon="💡",
             )
         st.dataframe(
@@ -234,18 +236,19 @@ else:
     # ------------------------------------------------------- snapshot view
     with snapshot_tab:
         st.caption(
-            "Know which title you're after? Click the box below and start "
-            "typing to jump straight to it, and get the full record: "
-            "description, credits, and catalog info."
+            "Know which title you're after? Click the dropdown below and "
+            "start typing to jump straight to it: description, credits, "
+            "and catalog info."
         )
         chosen = st.selectbox(
             f"Type a title, or open the list to browse all "
-            f"{len(results):,} match{'es' if len(results) != 1 else ''}",
+            f"{len(results):,} title{'s' if len(results) != 1 else ''}",
             results["title"].tolist(),
         )
-        st.caption(
-            "This box has its own quick search: click it and start typing, "
-            "and the list narrows to matching titles as you type."
+        st.info(
+            "This box has its own quick search: just click and start "
+            "typing, and the list narrows to matching titles as you type.",
+            icon="🔍",
         )
         row = results[results["title"] == chosen].iloc[0]
         left, right = st.columns([2, 1])
