@@ -593,6 +593,9 @@ else:
                 use_container_width=True,
                 hide_index=True,
                 row_height=85,
+                # Small result sets show every row outright; large ones
+                # get a tall window of about eight rows.
+                height=min(45 + 85 * len(preview), 725),
                 column_config={
                     "Country": st.column_config.TextColumn("Country", width="medium"),
                     "Director": st.column_config.TextColumn("Director", width="medium"),
