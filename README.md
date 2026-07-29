@@ -2,6 +2,8 @@
 
 A search tool for content coordinators who manage large streaming catalogs.
 
+**Live app:** https://sue-content-finder.streamlit.app/
+
 Built by **Susana Rivera** for Pursuit Cycle 2 (build-for-a-role project — Role: Content Coordinator at StreamVault).
 
 ## The Problem
@@ -14,12 +16,12 @@ Content Finder lets the coordinator type what they're looking for — a title, g
 
 ## MVP User Flow
 
-1. User uploads or links their content catalog (or starts with the built-in sample catalog)
+1. User uploads their own content catalog (or starts with the built-in catalog of 8,807 real Netflix titles)
 2. System organizes the content by genre, name, year, and keywords
 3. User types their question into the search bar
-4. System shows the best matches with short previews
-5. User selects the correct title to see full details
-6. User downloads a report of the results
+4. System shows every match in a Title Table, with filters for type, genre, and release year
+5. User switches to the Title Snapshot tab to see any one title's full record
+6. User downloads a report of the results as a CSV
 
 ## Running It
 
@@ -30,4 +32,6 @@ streamlit run app.py
 
 ## Data
 
-Week 3 uses a fictional sample catalog (`sample_data/sample_catalog.csv`) whose columns mirror a real streaming-catalog dataset (title, type, country, release year, rating, genre, date added), so a real open dataset can be swapped in for Week 4 without code changes.
+The app runs on the real Netflix catalog (`data/netflix_titles.csv`): 8,807 titles from the [Kaggle netflix-shows open dataset](https://www.kaggle.com/datasets/shivamb/netflix-shows), covering Netflix's US catalog through September 2021. In Week 3 I built against a fictional 40-title sample (`sample_data/sample_catalog.csv`, still in the repo) whose columns mirror the real dataset exactly — which is why swapping in the real data in Week 4 required no code changes.
+
+The raw CSV is never edited. Cleaning happens in code on every load: release_year converts to numeric, blank cells stay null and empty fields are hidden in the display, three source rows with duration misfiled into the rating column are repaired, and search matches singular and plural word forms. Several of these fixes came directly from peer testing and from checking the app's counts against the same data loaded into Snowflake with SQL.
