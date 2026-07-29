@@ -554,9 +554,10 @@ else:
             )
         with tip_col:
             st.info(
-                "More tools in the top right corner: search within results, "
-                "hide columns, or view full screen. Need one title's full "
-                "record? Switch to the Title Snapshot tab.",
+                "Hover over the table for hidden tools: search within "
+                "results, hide columns, or view full screen. Hover any "
+                "column header for its ⋮ menu: sort, pin, autosize, and "
+                "more. Full records live in the Title Snapshot tab.",
                 icon="💡",
             )
         st.session_state.compact_view = st.session_state.get("compact_view", False)
