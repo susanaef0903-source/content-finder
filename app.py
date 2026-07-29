@@ -5,8 +5,11 @@ type a title, genre, year, country, or keyword and get the best
 matches with previews, instead of digging through spreadsheets.
 """
 
+import difflib
+import re
 from pathlib import Path
 
+import altair as alt
 import pandas as pd
 import streamlit as st
 
@@ -15,7 +18,7 @@ import streamlit as st
 DEFAULT_CSV = Path(__file__).parent / "data" / "netflix_titles.csv"
 
 # Columns the search looks through, in order of how people usually ask.
-SEARCH_COLUMNS = ["title", "listed_in", "description", "country", "director", "cast"]
+SEARCH_COLUMNS = ["title", "listed_in", "description", "country", "director", "cast", "rating"]
 
 st.set_page_config(page_title="Content Finder", page_icon="🔎", layout="wide")
 
@@ -60,6 +63,11 @@ def load_catalog(uploaded_file=None) -> pd.DataFrame:
     if misfiled.any():
         df.loc[misfiled, "duration"] = df.loc[misfiled, "rating"]
         df.loc[misfiled, "rating"] = ""
+    # Movie runtimes as numbers ("90 min" -> 90), so length can be filtered.
+    df["minutes"] = pd.to_numeric(
+        df["duration"].astype(str).str.extract(r"(\d+)\s*min", expand=False),
+        errors="coerce",
+    )
     df["release_year"] = pd.to_numeric(df["release_year"], errors="coerce")
     return df
 
@@ -110,19 +118,71 @@ def search_catalog(df: pd.DataFrame, query: str) -> pd.DataFrame:
     for word in words:
         word_match = years == word
         for variant in word_variants(word):
-            word_match |= haystack.str.contains(variant, regex=False)
+            # Whole words only: "office" must not match "officer",
+            # nor "hanks" match "thanks".
+            pattern = r"\b" + re.escape(variant) + r"\b"
+            word_match |= haystack.str.contains(pattern, regex=True)
         match_all &= word_match
 
     results = df[match_all].copy()
-    # Rank: exact title first, then titles containing the whole query,
-    # then title word hits.
+    if results.empty:
+        return results
+    # Rank by where the match lives: exact title, then title words,
+    # then people (cast and director), then everything else.
     title = results["title"].fillna("").str.lower().str.strip()
+    people = (
+        results[["director", "cast"]].fillna("").astype(str)
+        .agg(" ".join, axis=1).str.lower()
+    )
     results["_rank"] = 0
-    results.loc[title.str.contains(query.lower(), regex=False), "_rank"] = 2
+    results.loc[title.str.contains(query.lower(), regex=False), "_rank"] = 4
+    people_all = pd.Series(True, index=results.index)
     for word in words:
-        results.loc[title.str.contains(word, regex=False), "_rank"] += 1
+        pattern = r"\b" + re.escape(word) + r"\b"
+        results.loc[title.str.contains(pattern, regex=True), "_rank"] += 2
+        in_people = people.str.contains(pattern, regex=True)
+        results.loc[in_people, "_rank"] += 1
+        people_all &= in_people
+    # The whole query naming one person (a cast or director search)
+    # outranks stray title-word hits.
+    if len(words) > 1:
+        results.loc[people_all, "_rank"] += 3
     results.loc[title == query.lower(), "_rank"] += 100
     return results.sort_values(["_rank", "title"], ascending=[False, True]).drop(columns="_rank")
+
+
+@st.cache_data
+def build_vocabulary(df: pd.DataFrame) -> dict:
+    """Every word in the searchable text with its frequency, for typo suggestions."""
+    text = " ".join(
+        df[SEARCH_COLUMNS].fillna("").astype(str).agg(" ".join, axis=1)
+    ).lower()
+    words = re.findall(r"[a-z][a-z']+", text)
+    freq: dict = {}
+    for w in words:
+        freq[w] = freq.get(w, 0) + 1
+    return freq
+
+
+def suggest_query(query: str, vocab: dict) -> str:
+    """The query with each unknown word replaced by its closest known word.
+
+    Ties between equally close candidates go to the most frequent word,
+    so 'koreen' suggests 'korean' rather than some rare lookalike.
+    """
+    fixed, changed = [], False
+    for word in query.lower().split():
+        if word in vocab:
+            fixed.append(word)
+            continue
+        close = difflib.get_close_matches(word, vocab.keys(), n=5, cutoff=0.8)
+        if close:
+            best = max(close, key=lambda w: vocab.get(w, 0))
+            fixed.append(best)
+            changed = True
+        else:
+            fixed.append(word)
+    return " ".join(fixed) if changed else ""
 
 
 # ---------------------------------------------------------------- sidebar
@@ -160,12 +220,25 @@ else:
 
 st.sidebar.subheader("Filters")
 type_filter = st.sidebar.multiselect(
-    "Type", sorted(catalog["type"].dropna().unique().tolist())
+    "Type", sorted(catalog["type"].dropna().unique().tolist()), key="type_f"
 )
+# Genre options follow the selected Type, so combinations that can only
+# return zero (a TV Show that is a movie genre) are never offered.
+genre_source = catalog[catalog["type"].isin(type_filter)] if type_filter else catalog
 all_genres = sorted(
-    {g.strip() for row in catalog["listed_in"].dropna() for g in str(row).split(",")}
+    {g.strip() for row in genre_source["listed_in"].dropna() for g in str(row).split(",")}
 )
-genre_filter = st.sidebar.multiselect("Genre", all_genres)
+genre_filter = st.sidebar.multiselect("Genre", all_genres, key="genre_f")
+
+all_ratings = sorted(
+    {str(r).strip() for r in catalog["rating"].dropna() if str(r).strip()}
+)
+rating_filter = st.sidebar.multiselect("Rating", all_ratings, key="rating_f")
+
+all_countries = sorted(
+    {c.strip() for row in catalog["country"].dropna() for c in str(row).split(",") if c.strip()}
+)
+country_filter = st.sidebar.multiselect("Country", all_countries, key="country_f")
 
 years = catalog["release_year"].dropna()
 if len(years) and years.min() < years.max():
@@ -173,19 +246,50 @@ if len(years) and years.min() < years.max():
         "Release year",
         int(years.min()), int(years.max()),
         (int(years.min()), int(years.max())),
+        key="year_f",
     )
 else:
     year_range = None
 
+minutes = catalog["minutes"].dropna()
+if len(minutes):
+    max_length = st.sidebar.slider(
+        "Max movie length (minutes)",
+        0, int(minutes.max()), int(minutes.max()),
+        key="length_f",
+        help="Applies to movies. TV shows measure in seasons and are not affected.",
+    )
+else:
+    max_length = None
+
+
+def reset_filters():
+    for key in ["type_f", "genre_f", "rating_f", "country_f", "year_f", "length_f"]:
+        st.session_state.pop(key, None)
+
+
+st.sidebar.button("Reset filters", on_click=reset_filters)
+
 # ---------------------------------------------------------------- search
 st.title("Content Finder")
 st.markdown(f"#### :blue[Title Catalog: {len(catalog):,} total]")
+st.caption(
+    "Snapshot from September 2021. Titles may have left streaming since, "
+    "and people credits are catalog data, not a talent database."
+)
 
 query = st.text_input(
-    "Search a title, genre, year, country, or keyword. Try "
+    "Search a title, genre, year, country, rating, or keyword. Try "
     "**documentaries norway**, **2021 thriller**, or **korean drama**.",
+    value=st.query_params.get("q", ""),
     placeholder="Type what you're looking for, then press Enter",
 )
+# Keep the search in the page address so a result set can be
+# bookmarked or shared.
+if query.strip():
+    st.query_params["q"] = query.strip()
+elif "q" in st.query_params:
+    del st.query_params["q"]
 st.caption(
     "Display results in two ways: 📋 Title Table scans every match "
     "and 🎯 Title Snapshot shows one title's full record. Narrow "
@@ -202,19 +306,53 @@ if genre_filter:
             lambda cell: any(g in cell for g in genre_filter)
         )
     ]
+if rating_filter:
+    results = results[results["rating"].isin(rating_filter)]
+if country_filter:
+    results = results[
+        results["country"].fillna("").apply(
+            lambda cell: any(c in cell for c in country_filter)
+        )
+    ]
 if year_range:
     results = results[
         results["release_year"].between(year_range[0], year_range[1], inclusive="both")
     ]
+if max_length is not None and len(minutes) and max_length < int(minutes.max()):
+    results = results[results["minutes"].isna() | (results["minutes"] <= max_length)]
 
 # Lives under the Filters section: updates as search and filters narrow
 # the catalog, instead of repeating the total shown in the main panel.
-st.sidebar.success(f"Showing {len(results):,} of {len(catalog):,} titles")
+# Amber at zero, so an empty result never looks like good news.
+count_note = st.sidebar.warning if results.empty else st.sidebar.success
+count_note(f"Showing {len(results):,} of {len(catalog):,} titles")
+
+# Name the active filters above the results, since the controls
+# themselves live in the sidebar.
+active = []
+if type_filter:
+    active.append("Type: " + ", ".join(type_filter))
+if genre_filter:
+    active.append("Genre: " + ", ".join(genre_filter))
+if rating_filter:
+    active.append("Rating: " + ", ".join(rating_filter))
+if country_filter:
+    active.append("Country: " + ", ".join(country_filter))
+if year_range and (year_range[0] > int(years.min()) or year_range[1] < int(years.max())):
+    active.append(f"Years {year_range[0]} to {year_range[1]}")
+if max_length is not None and len(minutes) and max_length < int(minutes.max()):
+    active.append(f"Movies up to {max_length} min")
+if active:
+    st.caption("Active filters: " + " · ".join(active))
 
 if len(results) != len(catalog):
     st.subheader(f"{len(results):,} match{'es' if len(results) != 1 else ''}")
 
 if results.empty:
+    if query.strip():
+        suggestion = suggest_query(query.strip(), build_vocabulary(catalog))
+        if suggestion:
+            st.info(f"Did you mean: **{suggestion}**?", icon="🔎")
     st.info(
         "No matches. Try fewer words, or clear a filter in the sidebar. "
         "It's also possible the title just isn't in this catalog. "
@@ -230,6 +368,9 @@ else:
             "country": "Country", "description": "Description",
         }
     )
+    # Missing values display as blanks, never as the word "None".
+    for col in ["Title", "Type", "Rating", "Length", "Genre", "Country", "Description"]:
+        preview[col] = preview[col].fillna("")
     browse_tab, snapshot_tab, overview_tab = st.tabs(
         [
             "📋 :blue[Title Table]",
@@ -255,15 +396,20 @@ else:
                 "record? Switch to the Title Snapshot tab.",
                 icon="💡",
             )
+        st.session_state.compact_view = st.session_state.get("compact_view", False)
         compact = st.toggle(
             "📱 Compact view",
+            key="compact_view",
             help="One card per title instead of the wide table. Best on phones.",
         )
         if compact:
-            shown = preview.head(30)
-            if len(preview) > 30:
+            card_count = st.selectbox(
+                "Cards to show", [30, 60, 120], key="card_count"
+            )
+            shown = preview.head(card_count)
+            if len(preview) > card_count:
                 st.caption(
-                    f"Showing the first 30 of {len(preview):,} matches. "
+                    f"Showing the first {card_count} of {len(preview):,} matches. "
                     "Narrow your search, or download the report for all of them."
                 )
             for _, row in shown.iterrows():
@@ -339,13 +485,27 @@ else:
             "The shape of the current selection. Both charts update live "
             "with your search and filters."
         )
-        years = results["release_year"].dropna().astype(int)
-        if len(years):
+        # Fixed (non zoomable) charts: wheel scrolling must scroll the
+        # page, never pan a chart into negative made-up territory.
+        chart_years = results["release_year"].dropna().astype(int)
+        if len(chart_years):
             st.markdown(
                 f"**Titles per release year** "
-                f"({int(years.min())} to {int(years.max())})"
+                f"({int(chart_years.min())} to {int(chart_years.max())})"
             )
-            st.bar_chart(years.value_counts().sort_index(), color="#3d9df3")
+            year_counts = (
+                chart_years.value_counts().sort_index()
+                .rename_axis("year").reset_index(name="titles")
+            )
+            st.altair_chart(
+                alt.Chart(year_counts)
+                .mark_bar(color="#3d9df3")
+                .encode(
+                    x=alt.X("year:Q", axis=alt.Axis(format="d", title=None)),
+                    y=alt.Y("titles:Q", axis=alt.Axis(format="d", title=None)),
+                ),
+                use_container_width=True,
+            )
         genres = (
             results["listed_in"].dropna().astype(str)
             .str.split(",").explode().str.strip()
@@ -353,8 +513,16 @@ else:
         genres = genres[genres != ""]
         if len(genres):
             st.markdown("**Top genres in this selection**")
-            st.bar_chart(
-                genres.value_counts().head(10).sort_values(),
-                horizontal=True,
-                color="#b27eff",
+            genre_counts = (
+                genres.value_counts().head(10)
+                .rename_axis("genre").reset_index(name="titles")
+            )
+            st.altair_chart(
+                alt.Chart(genre_counts)
+                .mark_bar(color="#b27eff")
+                .encode(
+                    x=alt.X("titles:Q", axis=alt.Axis(format="d", title=None)),
+                    y=alt.Y("genre:N", sort="-x", title=None),
+                ),
+                use_container_width=True,
             )
