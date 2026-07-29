@@ -279,10 +279,12 @@ st.caption(
     "and people credits are catalog data, not a talent database."
 )
 
+if "search_q" not in st.session_state:
+    st.session_state.search_q = st.query_params.get("q", "")
 query = st.text_input(
     "Search a title, genre, year, country, rating, or keyword. Try "
     "**documentaries norway**, **2021 thriller**, or **korean drama**.",
-    value=st.query_params.get("q", ""),
+    key="search_q",
     placeholder="Type what you're looking for, then press Enter",
 )
 # Keep the search in the page address so a result set can be
@@ -349,11 +351,20 @@ if active:
 if len(results) != len(catalog):
     st.subheader(f"{len(results):,} match{'es' if len(results) != 1 else ''}")
 
+def apply_suggestion(text: str):
+    st.session_state.search_q = text
+
+
 if results.empty:
     if query.strip():
         suggestion = suggest_query(query.strip(), build_vocabulary(catalog))
         if suggestion:
-            st.info(f"Did you mean: **{suggestion}**?", icon="🔎")
+            st.button(
+                f"Did you mean: {suggestion}?",
+                icon="🔎",
+                on_click=apply_suggestion,
+                args=(suggestion,),
+            )
     st.info(
         "No matches. Try fewer words, or clear a filter in the sidebar. "
         "It's also possible the title just isn't in this catalog. "
