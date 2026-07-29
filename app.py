@@ -251,17 +251,40 @@ else:
                 "record? Switch to the Title Snapshot tab.",
                 icon="💡",
             )
-        st.dataframe(
-            preview,
-            use_container_width=True,
-            hide_index=True,
-            row_height=85,
-            column_config={
-                "Description": st.column_config.TextColumn(
-                    "Description", width="large"
-                ),
-            },
+        compact = st.toggle(
+            "📱 Compact view",
+            help="One card per title instead of the wide table. Best on phones.",
         )
+        if compact:
+            shown = preview.head(30)
+            if len(preview) > 30:
+                st.caption(
+                    f"Showing the first 30 of {len(preview):,} matches. "
+                    "Narrow your search, or download the report for all of them."
+                )
+            for _, row in shown.iterrows():
+                with st.container(border=True):
+                    year = f" ({int(row['Year'])})" if pd.notna(row["Year"]) else ""
+                    st.markdown(f"**{row['Title']}**{year}")
+                    facts = " · ".join(
+                        str(row[c]) for c in ["Type", "Length", "Rating"] if has_value(row[c])
+                    )
+                    if facts:
+                        st.caption(facts)
+                    if has_value(row["Genre"]):
+                        st.caption(str(row["Genre"]))
+        else:
+            st.dataframe(
+                preview,
+                use_container_width=True,
+                hide_index=True,
+                row_height=85,
+                column_config={
+                    "Description": st.column_config.TextColumn(
+                        "Description", width="large"
+                    ),
+                },
+            )
 
     # ------------------------------------------------------- snapshot view
     with snapshot_tab:
