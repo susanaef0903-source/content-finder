@@ -94,16 +94,24 @@ def word_variants(word: str) -> set:
     return variants
 
 
+def parse_query(query: str):
+    """Split a query into quoted phrases and loose words."""
+    phrases = [p.strip().lower() for p in re.findall(r'"([^"]+)"', query) if p.strip()]
+    rest = re.sub(r'"[^"]*"', " ", query).lower().split()
+    return phrases, rest
+
+
 def search_catalog(df: pd.DataFrame, query: str) -> pd.DataFrame:
     """Return rows matching the query, best matches first.
 
     A row matches if every word in the query appears somewhere in its
     searchable columns (title, genre, description, country, people) or
-    equals its release year. Singular and plural forms of a word count
-    as the same word. Title hits rank above other hits.
+    equals its release year. Words in quotes match as an exact phrase.
+    Singular and plural forms of a word count as the same word. Title
+    hits rank above other hits.
     """
-    words = query.lower().split()
-    if not words:
+    phrases, words = parse_query(query)
+    if not words and not phrases:
         return df
 
     haystack = (
@@ -116,6 +124,9 @@ def search_catalog(df: pd.DataFrame, query: str) -> pd.DataFrame:
     years = df["release_year"].fillna(0).astype(int).astype(str)
 
     match_all = pd.Series(True, index=df.index)
+    for phrase in phrases:
+        pattern = r"\b" + re.escape(phrase) + r"\b"
+        match_all &= haystack.str.contains(pattern, regex=True)
     for word in words:
         word_match = years == word
         for variant in word_variants(word):
@@ -135,20 +146,22 @@ def search_catalog(df: pd.DataFrame, query: str) -> pd.DataFrame:
         results[["director", "cast"]].fillna("").astype(str)
         .agg(" ".join, axis=1).str.lower()
     )
+    bare_query = query.lower().replace('"', "").strip()
     results["_rank"] = 0
-    results.loc[title.str.contains(query.lower(), regex=False), "_rank"] = 4
+    results.loc[title.str.contains(bare_query, regex=False), "_rank"] = 4
+    tokens = phrases + words
     people_all = pd.Series(True, index=results.index)
-    for word in words:
-        pattern = r"\b" + re.escape(word) + r"\b"
+    for token in tokens:
+        pattern = r"\b" + re.escape(token) + r"\b"
         results.loc[title.str.contains(pattern, regex=True), "_rank"] += 2
         in_people = people.str.contains(pattern, regex=True)
         results.loc[in_people, "_rank"] += 1
         people_all &= in_people
     # The whole query naming one person (a cast or director search)
     # outranks stray title-word hits.
-    if len(words) > 1:
+    if len(tokens) > 1 or any(" " in p for p in phrases):
         results.loc[people_all, "_rank"] += 3
-    results.loc[title == query.lower(), "_rank"] += 100
+    results.loc[title == bare_query, "_rank"] += 100
     return results.sort_values(["_rank", "title"], ascending=[False, True]).drop(columns="_rank")
 
 
@@ -172,7 +185,7 @@ def suggest_query(query: str, vocab: dict) -> str:
     so 'koreen' suggests 'korean' rather than some rare lookalike.
     """
     fixed, changed = [], False
-    for word in query.lower().split():
+    for word in query.lower().replace('"', " ").split():
         if word in vocab:
             fixed.append(word)
             continue
@@ -220,45 +233,81 @@ else:
     )
 
 st.sidebar.subheader("Filters")
-type_filter = st.sidebar.multiselect(
-    "Type", sorted(catalog["type"].dropna().unique().tolist()), key="type_f"
-)
-# Genre options follow the selected Type, so combinations that can only
-# return zero (a TV Show that is a movie genre) are never offered.
+
+
+def seed_list_from_url(state_key: str, url_key: str, options: list):
+    """Let a shared link restore a multiselect, ignoring invalid values."""
+    if state_key not in st.session_state and url_key in st.query_params:
+        wanted = st.query_params[url_key].split(",")
+        valid = [v for v in options if v in wanted]
+        if valid:
+            st.session_state[state_key] = valid
+
+
+all_types = sorted(catalog["type"].dropna().unique().tolist())
+seed_list_from_url("type_f", "type", all_types)
+type_filter = st.sidebar.multiselect("Type", all_types, key="type_f")
+
+# Genre and Rating options follow the selected Type, so combinations
+# that can only return zero are never offered.
 genre_source = catalog[catalog["type"].isin(type_filter)] if type_filter else catalog
 all_genres = sorted(
     {g.strip() for row in genre_source["listed_in"].dropna() for g in str(row).split(",")}
 )
+seed_list_from_url("genre_f", "genre", all_genres)
 genre_filter = st.sidebar.multiselect("Genre", all_genres, key="genre_f")
 
-all_ratings = sorted(
-    {str(r).strip() for r in catalog["rating"].dropna() if str(r).strip()}
+# Ratings run youngest to most mature within each system (movie
+# ratings first, then TV), instead of one alphabetical jumble.
+RATING_ORDER = [
+    "G", "PG", "PG-13", "R", "NC-17", "NR", "UR",
+    "TV-Y", "TV-Y7", "TV-Y7-FV", "TV-G", "TV-PG", "TV-14", "TV-MA",
+]
+rating_pool = {str(r).strip() for r in genre_source["rating"].dropna() if str(r).strip()}
+all_ratings = [r for r in RATING_ORDER if r in rating_pool] + sorted(
+    rating_pool - set(RATING_ORDER)
 )
+seed_list_from_url("rating_f", "rating", all_ratings)
 rating_filter = st.sidebar.multiselect("Rating", all_ratings, key="rating_f")
 
 all_countries = sorted(
     {c.strip() for row in catalog["country"].dropna() for c in str(row).split(",") if c.strip()}
 )
+seed_list_from_url("country_f", "country", all_countries)
 country_filter = st.sidebar.multiselect("Country", all_countries, key="country_f")
 
 years = catalog["release_year"].dropna()
 if len(years) and years.min() < years.max():
+    y_lo, y_hi = int(years.min()), int(years.max())
+    if "year_f" not in st.session_state and "year" in st.query_params:
+        try:
+            lo, hi = (int(v) for v in st.query_params["year"].split("-"))
+            if y_lo <= lo <= hi <= y_hi:
+                st.session_state.year_f = (lo, hi)
+        except ValueError:
+            pass
     year_range = st.sidebar.slider(
-        "Release year",
-        int(years.min()), int(years.max()),
-        (int(years.min()), int(years.max())),
-        key="year_f",
+        "Release year", y_lo, y_hi, (y_lo, y_hi), key="year_f"
     )
 else:
     year_range = None
 
 minutes = catalog["minutes"].dropna()
 if len(minutes):
+    m_hi = int(minutes.max())
+    if "length_f" not in st.session_state and "len" in st.query_params:
+        try:
+            v = int(st.query_params["len"])
+            if 0 <= v <= m_hi:
+                st.session_state.length_f = v
+        except ValueError:
+            pass
     max_length = st.sidebar.slider(
         "Max movie length (minutes)",
-        0, int(minutes.max()), int(minutes.max()),
+        0, m_hi, m_hi,
         key="length_f",
-        help="Applies to movies. TV shows measure in seasons and are not affected.",
+        help="Set below the maximum to keep only movies that fit the time. "
+             "TV shows measure in seasons and are excluded while this is active.",
     )
 else:
     max_length = None
@@ -302,17 +351,14 @@ query = st.text_input(
     key="search_q",
     placeholder="Type what you're looking for, then press Enter",
 )
-# Keep the search in the page address so a result set can be
-# bookmarked or shared.
-if query.strip():
-    st.query_params["q"] = query.strip()
-elif "q" in st.query_params:
-    del st.query_params["q"]
+# The page address is updated after filtering, further down, so a
+# shared link carries the search AND the filters.
 st.caption(
-    "Display results in two ways: 📋 Title Table scans every match "
-    "and 🎯 Title Snapshot shows one title's full record. Narrow "
-    "results with the Type, Genre, and Release year filters in the "
-    "left sidebar."
+    "Display results three ways: 📋 Title Table scans every match, "
+    "🎯 Title Snapshot shows one title's full record, and 📊 Catalog "
+    "Overview charts the selection. Narrow results with the Type, "
+    "Genre, Rating, Country, Release year, and movie length filters "
+    "in the left sidebar. Put words in quotes to match an exact phrase."
 )
 
 results = search_catalog(catalog, query.strip())
@@ -337,7 +383,9 @@ if year_range:
         results["release_year"].between(year_range[0], year_range[1], inclusive="both")
     ]
 if max_length is not None and len(minutes) and max_length < int(minutes.max()):
-    results = results[results["minutes"].isna() | (results["minutes"] <= max_length)]
+    # An active runtime cap means "fits the time": series without a
+    # runtime are excluded rather than slipping through.
+    results = results[results["minutes"] <= max_length]
 
 # Lives under the Filters section: updates as search and filters narrow
 # the catalog, instead of repeating the total shown in the main panel.
@@ -363,6 +411,25 @@ if max_length is not None and len(minutes) and max_length < int(minutes.max()):
 if active:
     st.caption("Active filters: " + " · ".join(active))
 
+# Everything about the current selection lives in the page address,
+# so a bookmarked or shared link restores search and filters alike.
+url_state = {}
+if query.strip():
+    url_state["q"] = query.strip()
+if type_filter:
+    url_state["type"] = ",".join(type_filter)
+if genre_filter:
+    url_state["genre"] = ",".join(genre_filter)
+if rating_filter:
+    url_state["rating"] = ",".join(rating_filter)
+if country_filter:
+    url_state["country"] = ",".join(country_filter)
+if year_range and (year_range[0] > int(years.min()) or year_range[1] < int(years.max())):
+    url_state["year"] = f"{year_range[0]}-{year_range[1]}"
+if max_length is not None and len(minutes) and max_length < int(minutes.max()):
+    url_state["len"] = str(max_length)
+st.query_params.from_dict(url_state)
+
 if len(results) != len(catalog):
     st.subheader(f"{len(results):,} match{'es' if len(results) != 1 else ''}")
 
@@ -385,6 +452,25 @@ if results.empty:
         "It's also possible the title just isn't in this catalog. "
         "It only covers what's actually in the loaded data."
     )
+    # The tabs stay put even with nothing to show, so an empty result
+    # reads as "loosen the search", not "the app broke".
+    empty_tabs = st.tabs(
+        [
+            "📋 :blue[Title Table]",
+            "🎯 :violet[Title Snapshot]",
+            "📊 :green[Catalog Overview]",
+        ]
+    )
+    for tab, message in zip(
+        empty_tabs,
+        [
+            "No titles to list yet.",
+            "No title to inspect yet.",
+            "Nothing to chart yet.",
+        ],
+    ):
+        with tab:
+            st.caption(message)
 else:
     preview = results[
         ["title", "type", "release_year", "rating", "duration", "listed_in",
@@ -490,6 +576,9 @@ else:
                 hide_index=True,
                 row_height=85,
                 column_config={
+                    "Country": st.column_config.TextColumn("Country", width="medium"),
+                    "Director": st.column_config.TextColumn("Director", width="medium"),
+                    "Cast": st.column_config.TextColumn("Cast", width="medium"),
                     "Description": st.column_config.TextColumn(
                         "Description", width="large"
                     ),
@@ -561,7 +650,11 @@ else:
                 alt.Chart(year_counts)
                 .mark_bar(color="#3d9df3")
                 .encode(
-                    x=alt.X("year:Q", axis=alt.Axis(format="d", title=None)),
+                    x=alt.X(
+                        "year:Q",
+                        axis=alt.Axis(format="d", title=None),
+                        scale=alt.Scale(nice=False),
+                    ),
                     y=alt.Y("titles:Q", axis=alt.Axis(format="d", title=None)),
                 ),
                 use_container_width=True,
