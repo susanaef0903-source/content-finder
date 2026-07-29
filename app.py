@@ -7,6 +7,7 @@ matches with previews, instead of digging through spreadsheets.
 
 import difflib
 import re
+from datetime import date
 from pathlib import Path
 
 import altair as alt
@@ -383,11 +384,41 @@ else:
     with browse_tab:
         action_col, tip_col = st.columns([1, 2])
         with action_col:
+            # The report uses the same friendly labels as the screen,
+            # includes the credit columns the table does not show, and
+            # keeps the internal id last.
+            export = results[
+                ["title", "type", "release_year", "rating", "duration",
+                 "listed_in", "country", "director", "cast", "date_added",
+                 "description", "show_id"]
+            ].rename(columns={
+                "title": "Title", "type": "Type", "release_year": "Year",
+                "rating": "Rating", "duration": "Length",
+                "listed_in": "Genre", "country": "Country",
+                "director": "Director", "cast": "Cast",
+                "date_added": "Date Added", "description": "Description",
+                "show_id": "Catalog ID",
+            })
+            # Filename says what was selected and when it was exported,
+            # so a folder of reports stays tellable-apart.
+            slug_bits = []
+            if query.strip():
+                slug_bits.append(re.sub(r"[^a-z0-9]+", "-", query.lower().strip()).strip("-"))
+            for chosen_filter in (type_filter, genre_filter, rating_filter, country_filter):
+                if chosen_filter:
+                    slug_bits.append(
+                        re.sub(r"[^a-z0-9]+", "-", "-".join(chosen_filter).lower()).strip("-")
+                    )
+            slug = "_".join(slug_bits)[:60].strip("_-") or "all-titles"
             st.download_button(
                 "⬇️ Download these results as a report (CSV)",
-                results.to_csv(index=False).encode("utf-8"),
-                file_name="content-finder-report.csv",
+                export.to_csv(index=False).encode("utf-8"),
+                file_name=f"content-finder_{slug}_{date.today().isoformat()}.csv",
                 mime="text/csv",
+            )
+            st.caption(
+                "The report carries all twelve columns, including Director "
+                "and Cast, from the September 2021 catalog snapshot."
             )
         with tip_col:
             st.info(
