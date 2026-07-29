@@ -597,11 +597,12 @@ else:
                 # get a tall window of about eight rows.
                 height=min(45 + 85 * len(preview), 725),
                 column_config={
-                    "Country": st.column_config.TextColumn("Country", width="medium"),
-                    "Director": st.column_config.TextColumn("Director", width="medium"),
+                    "Genre": st.column_config.TextColumn("Genre", width=170),
+                    "Country": st.column_config.TextColumn("Country", width=140),
+                    "Director": st.column_config.TextColumn("Director", width=140),
                     "Cast": st.column_config.TextColumn(
                         "Cast",
-                        width="medium",
+                        width=260,
                         help="Long casts are trimmed here. The Title Snapshot shows the full list.",
                     ),
                     "Description": st.column_config.TextColumn(
