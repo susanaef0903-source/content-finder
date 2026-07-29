@@ -264,12 +264,27 @@ else:
     max_length = None
 
 
-def reset_filters():
-    for key in ["type_f", "genre_f", "rating_f", "country_f", "year_f", "length_f"]:
-        st.session_state.pop(key, None)
+def reset_filters(year_bounds, length_max):
+    # Assign defaults rather than deleting keys: deleting lets the
+    # widgets resurrect their previous values on the next redraw.
+    st.session_state.type_f = []
+    st.session_state.genre_f = []
+    st.session_state.rating_f = []
+    st.session_state.country_f = []
+    if year_bounds is not None:
+        st.session_state.year_f = year_bounds
+    if length_max is not None:
+        st.session_state.length_f = length_max
 
 
-st.sidebar.button("Reset filters", on_click=reset_filters)
+st.sidebar.button(
+    "Reset filters",
+    on_click=reset_filters,
+    args=(
+        (int(years.min()), int(years.max())) if year_range is not None else None,
+        int(minutes.max()) if len(minutes) else None,
+    ),
+)
 
 # ---------------------------------------------------------------- search
 st.title("Content Finder")
@@ -372,16 +387,19 @@ if results.empty:
     )
 else:
     preview = results[
-        ["title", "type", "release_year", "rating", "duration", "listed_in", "country", "description"]
+        ["title", "type", "release_year", "rating", "duration", "listed_in",
+         "country", "director", "cast", "description"]
     ].rename(
         columns={
             "title": "Title", "type": "Type", "release_year": "Year",
             "rating": "Rating", "duration": "Length", "listed_in": "Genre",
-            "country": "Country", "description": "Description",
+            "country": "Country", "director": "Director", "cast": "Cast",
+            "description": "Description",
         }
     )
     # Missing values display as blanks, never as the word "None".
-    for col in ["Title", "Type", "Rating", "Length", "Genre", "Country", "Description"]:
+    for col in ["Title", "Type", "Rating", "Length", "Genre", "Country",
+                "Director", "Cast", "Description"]:
         preview[col] = preview[col].fillna("")
     browse_tab, snapshot_tab, overview_tab = st.tabs(
         [
