@@ -126,7 +126,8 @@ def search_catalog(df: pd.DataFrame, query: str) -> pd.DataFrame:
     match_all = pd.Series(True, index=df.index)
     for phrase in phrases:
         pattern = r"\b" + re.escape(phrase) + r"\b"
-        match_all &= haystack.str.contains(pattern, regex=True)
+        # A quoted year should still match the year field.
+        match_all &= haystack.str.contains(pattern, regex=True) | (years == phrase)
     for word in words:
         word_match = years == word
         for variant in word_variants(word):
@@ -358,7 +359,9 @@ st.caption(
     "🎯 Title Snapshot shows one title's full record, and 📊 Catalog "
     "Overview charts the selection. Narrow results with the Type, "
     "Genre, Rating, Country, Release year, and movie length filters "
-    "in the left sidebar. Put words in quotes to match an exact phrase."
+    "in the left sidebar. Put words in quotes to match an exact phrase; "
+    "quoted phrases search every text field, descriptions included, so a "
+    "quoted name can also surface producer or subject mentions."
 )
 
 results = search_catalog(catalog, query.strip())
@@ -438,6 +441,16 @@ def apply_suggestion(text: str):
 
 
 if results.empty:
+    if (
+        type_filter and "Movie" not in type_filter
+        and max_length is not None and len(minutes)
+        and max_length < int(minutes.max())
+    ):
+        st.info(
+            "The movie length cap excludes TV shows, and your Type filter "
+            "keeps only TV shows, so nothing can match. Clear one of the two.",
+            icon="⏱️",
+        )
     if query.strip():
         suggestion = suggest_query(query.strip(), build_vocabulary(catalog))
         if suggestion:
@@ -578,7 +591,11 @@ else:
                 column_config={
                     "Country": st.column_config.TextColumn("Country", width="medium"),
                     "Director": st.column_config.TextColumn("Director", width="medium"),
-                    "Cast": st.column_config.TextColumn("Cast", width="medium"),
+                    "Cast": st.column_config.TextColumn(
+                        "Cast",
+                        width="medium",
+                        help="Long casts are trimmed here. The Title Snapshot shows the full list.",
+                    ),
                     "Description": st.column_config.TextColumn(
                         "Description", width="large"
                     ),
