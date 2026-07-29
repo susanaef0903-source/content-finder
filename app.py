@@ -54,6 +54,12 @@ def load_catalog(uploaded_file=None) -> pd.DataFrame:
     for col in SEARCH_COLUMNS + ["release_year", "rating", "duration", "date_added", "type"]:
         if col not in df.columns:
             df[col] = ""
+    # A few source rows have the duration ("74 min") misfiled into the
+    # rating column; move those values home and clear the rating.
+    misfiled = df["rating"].astype(str).str.contains("min", regex=False, na=False)
+    if misfiled.any():
+        df.loc[misfiled, "duration"] = df.loc[misfiled, "rating"]
+        df.loc[misfiled, "rating"] = ""
     df["release_year"] = pd.to_numeric(df["release_year"], errors="coerce")
     return df
 
