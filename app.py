@@ -560,6 +560,23 @@ else:
                 "more. Full records live in the Title Snapshot tab.",
                 icon="💡",
             )
+        # Sorting lives in the table's hidden column menus, which peer
+        # testing showed nobody finds; this visible control does the
+        # same job in plain sight and also orders the compact cards.
+        sort_col, _ = st.columns([1, 2])
+        with sort_col:
+            sort_choice = st.selectbox(
+                "Sort results",
+                ["Best match", "Year, newest first", "Year, oldest first", "Title A to Z"],
+                key="sort_by",
+            )
+        if sort_choice == "Year, newest first":
+            preview = preview.sort_values("Year", ascending=False, na_position="last")
+        elif sort_choice == "Year, oldest first":
+            preview = preview.sort_values("Year", ascending=True, na_position="last")
+        elif sort_choice == "Title A to Z":
+            preview = preview.sort_values("Title", key=lambda s: s.str.lower())
+
         st.session_state.compact_view = st.session_state.get("compact_view", False)
         compact = st.toggle(
             "📱 Compact view",
