@@ -1,0 +1,4 @@
+[theme]
+# The app is designed and tested on the dark theme; pin it so every
+# visitor sees the intended look regardless of their system setting.
+base = "dark"
