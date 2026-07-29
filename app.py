@@ -230,8 +230,12 @@ else:
             "country": "Country", "description": "Description",
         }
     )
-    browse_tab, snapshot_tab = st.tabs(
-        ["📋 :blue[Title Table]", "🎯 :violet[Title Snapshot]"]
+    browse_tab, snapshot_tab, overview_tab = st.tabs(
+        [
+            "📋 :blue[Title Table]",
+            "🎯 :violet[Title Snapshot]",
+            "📊 :green[Catalog Overview]",
+        ]
     )
 
     # ------------------------------------------------------- browse view
@@ -328,3 +332,29 @@ else:
                 st.write(f"**Country:** {row['country']}")
             if has_value(row["date_added"]):
                 st.write(f"**Added to catalog:** {row['date_added']}")
+
+    # ------------------------------------------------------- overview
+    with overview_tab:
+        st.caption(
+            "The shape of the current selection. Both charts update live "
+            "with your search and filters."
+        )
+        years = results["release_year"].dropna().astype(int)
+        if len(years):
+            st.markdown(
+                f"**Titles per release year** "
+                f"({int(years.min())} to {int(years.max())})"
+            )
+            st.bar_chart(years.value_counts().sort_index(), color="#3d9df3")
+        genres = (
+            results["listed_in"].dropna().astype(str)
+            .str.split(",").explode().str.strip()
+        )
+        genres = genres[genres != ""]
+        if len(genres):
+            st.markdown("**Top genres in this selection**")
+            st.bar_chart(
+                genres.value_counts().head(10).sort_values(),
+                horizontal=True,
+                color="#b27eff",
+            )
