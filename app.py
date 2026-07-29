@@ -441,6 +441,7 @@ def apply_suggestion(text: str):
 
 
 if results.empty:
+    diagnosed = False
     if (
         type_filter and "Movie" not in type_filter
         and max_length is not None and len(minutes)
@@ -451,6 +452,7 @@ if results.empty:
             "keeps only TV shows, so nothing can match. Clear one of the two.",
             icon="⏱️",
         )
+        diagnosed = True
     if query.strip():
         suggestion = suggest_query(query.strip(), build_vocabulary(catalog))
         if suggestion:
@@ -460,11 +462,13 @@ if results.empty:
                 on_click=apply_suggestion,
                 args=(suggestion,),
             )
-    st.info(
-        "No matches. Try fewer words, or clear a filter in the sidebar. "
-        "It's also possible the title just isn't in this catalog. "
-        "It only covers what's actually in the loaded data."
-    )
+    if not diagnosed:
+        # The generic advice steps aside when a specific diagnosis exists.
+        st.info(
+            "No matches. Try fewer words, or clear a filter in the sidebar. "
+            "It's also possible the title just isn't in this catalog. "
+            "It only covers what's actually in the loaded data."
+        )
     # The tabs stay put even with nothing to show, so an empty result
     # reads as "loosen the search", not "the app broke".
     empty_tabs = st.tabs(
