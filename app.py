@@ -414,6 +414,18 @@ if max_length is not None and len(minutes) and max_length < int(minutes.max()):
 if active:
     st.caption("Active filters: " + " · ".join(active))
 
+# Seed sort and view from the address BEFORE the write-back below
+# strips unknown parameters; their widgets render later in the page.
+SORT_FROM_URL = {
+    "year-desc": "Year, newest first",
+    "year-asc": "Year, oldest first",
+    "title": "Title A to Z",
+}
+if "sort_by" not in st.session_state and st.query_params.get("sort") in SORT_FROM_URL:
+    st.session_state.sort_by = SORT_FROM_URL[st.query_params["sort"]]
+if "compact_view" not in st.session_state and st.query_params.get("view") == "cards":
+    st.session_state.compact_view = True
+
 # Everything about the current selection lives in the page address,
 # so a bookmarked or shared link restores search and filters alike.
 url_state = {}
@@ -431,6 +443,15 @@ if year_range and (year_range[0] > int(years.min()) or year_range[1] < int(years
     url_state["year"] = f"{year_range[0]}-{year_range[1]}"
 if max_length is not None and len(minutes) and max_length < int(minutes.max()):
     url_state["len"] = str(max_length)
+SORT_TO_URL = {
+    "Year, newest first": "year-desc",
+    "Year, oldest first": "year-asc",
+    "Title A to Z": "title",
+}
+if st.session_state.get("sort_by") in SORT_TO_URL:
+    url_state["sort"] = SORT_TO_URL[st.session_state["sort_by"]]
+if st.session_state.get("compact_view"):
+    url_state["view"] = "cards"
 st.query_params.from_dict(url_state)
 
 if len(results) != len(catalog):
@@ -455,7 +476,9 @@ if results.empty:
         diagnosed = True
     if query.strip():
         suggestion = suggest_query(query.strip(), build_vocabulary(catalog))
-        if suggestion:
+        # Only offer a suggestion that actually returns matches, so the
+        # one helpful button on an empty page is never a second dead end.
+        if suggestion and not search_catalog(catalog, suggestion).empty:
             st.button(
                 f"Did you mean: {suggestion}?",
                 icon="🔎",
@@ -550,7 +573,9 @@ else:
             )
             st.caption(
                 "The report carries all twelve columns, including Director "
-                "and Cast, from the September 2021 catalog snapshot."
+                "and Cast, from the September 2021 catalog snapshot. Use "
+                "this button rather than the table's quick download icon, "
+                "which exports only the raw grid."
             )
         # Sorting lives in the table's hidden column menus, which peer
         # testing showed nobody finds; this visible control does the
@@ -574,14 +599,6 @@ else:
             key="compact_view",
             help="One card per title instead of the wide table. Best on phones.",
         )
-        # The tip sits right above the table it describes.
-        st.info(
-            "Hover over the table for hidden tools: search within "
-            "results, hide columns, or view full screen. Hover any "
-            "column header for its ⋮ menu: sort, pin, autosize, and "
-            "more. Full records live in the Title Snapshot tab.",
-            icon="💡",
-        )
         if compact:
             card_count = st.selectbox(
                 "Cards to show", [30, 60, 120], key="card_count"
@@ -604,6 +621,15 @@ else:
                     if has_value(row["Genre"]):
                         st.caption(str(row["Genre"]))
         else:
+            # The tip sits right above the table it describes, and only
+            # when the table is actually on screen.
+            st.info(
+                "Hover over the table for hidden tools: search within "
+                "results, hide columns, or view full screen. Hover any "
+                "column header for its ⋮ menu: sort, pin, autosize, and "
+                "more. Full records live in the Title Snapshot tab.",
+                icon="💡",
+            )
             st.dataframe(
                 preview,
                 use_container_width=True,
@@ -697,7 +723,10 @@ else:
                         axis=alt.Axis(format="d", title=None),
                         scale=alt.Scale(nice=False),
                     ),
-                    y=alt.Y("titles:Q", axis=alt.Axis(format="d", title=None)),
+                    y=alt.Y(
+                        "titles:Q",
+                        axis=alt.Axis(format="d", title=None, tickMinStep=1),
+                    ),
                 ),
                 use_container_width=True,
             )
@@ -716,7 +745,10 @@ else:
                 alt.Chart(genre_counts)
                 .mark_bar(color="#b27eff")
                 .encode(
-                    x=alt.X("titles:Q", axis=alt.Axis(format="d", title=None)),
+                    x=alt.X(
+                        "titles:Q",
+                        axis=alt.Axis(format="d", title=None, tickMinStep=1),
+                    ),
                     y=alt.Y("genre:N", sort="-x", title=None),
                 ),
                 use_container_width=True,
