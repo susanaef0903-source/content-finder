@@ -1,0 +1,76 @@
+<svg width="1500" height="640" viewBox="0 0 1500 640" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial, sans-serif">
+  <rect x="0" y="0" width="1500" height="640" fill="#0e1117"/>
+  <text x="750" y="52" text-anchor="middle" font-size="30" font-weight="bold" fill="#fafafa">Content Finder: how the data flows</text>
+  <text x="750" y="82" text-anchor="middle" font-size="16" fill="#9aa0a6">The raw file is never edited. Every step happens in code, on every load.</text>
+
+  <!-- 1. Source -->
+  <rect x="40" y="150" width="230" height="130" rx="14" fill="#161b22" stroke="#3d9df3" stroke-width="2.5"/>
+  <text x="155" y="185" text-anchor="middle" font-size="18" font-weight="bold" fill="#3d9df3">1. Real data</text>
+  <text x="155" y="212" text-anchor="middle" font-size="14" fill="#fafafa">netflix_titles.csv</text>
+  <text x="155" y="234" text-anchor="middle" font-size="13" fill="#9aa0a6">Kaggle open dataset</text>
+  <text x="155" y="256" text-anchor="middle" font-size="13" fill="#9aa0a6">8,807 titles, 12 columns</text>
+
+  <line x1="270" y1="215" x2="330" y2="215" stroke="#fafafa" stroke-width="2.5"/>
+  <polygon points="330,207 330,223 348,215" fill="#fafafa"/>
+
+  <!-- 2. Load & clean -->
+  <rect x="350" y="130" width="250" height="170" rx="14" fill="#161b22" stroke="#3d9df3" stroke-width="2.5"/>
+  <text x="475" y="163" text-anchor="middle" font-size="18" font-weight="bold" fill="#3d9df3">2. Load and clean</text>
+  <text x="475" y="190" text-anchor="middle" font-size="13" fill="#fafafa">years become numbers</text>
+  <text x="475" y="211" text-anchor="middle" font-size="13" fill="#fafafa">misfiled durations repaired</text>
+  <text x="475" y="232" text-anchor="middle" font-size="13" fill="#fafafa">blanks stay null, never zero</text>
+  <text x="475" y="253" text-anchor="middle" font-size="13" fill="#fafafa">movie minutes parsed</text>
+  <text x="475" y="279" text-anchor="middle" font-size="12" fill="#9aa0a6">(uploads take this same path)</text>
+
+  <line x1="600" y1="215" x2="660" y2="215" stroke="#fafafa" stroke-width="2.5"/>
+  <polygon points="660,207 660,223 678,215" fill="#fafafa"/>
+
+  <!-- 3. Search & rank -->
+  <rect x="680" y="130" width="250" height="170" rx="14" fill="#161b22" stroke="#b27eff" stroke-width="2.5"/>
+  <text x="805" y="163" text-anchor="middle" font-size="18" font-weight="bold" fill="#b27eff">3. Search and rank</text>
+  <text x="805" y="190" text-anchor="middle" font-size="13" fill="#fafafa">whole words, quoted phrases</text>
+  <text x="805" y="211" text-anchor="middle" font-size="13" fill="#fafafa">singular and plural match</text>
+  <text x="805" y="232" text-anchor="middle" font-size="13" fill="#fafafa">exact title first, then people</text>
+  <text x="805" y="253" text-anchor="middle" font-size="13" fill="#fafafa">typos get a one-click fix</text>
+  <text x="805" y="279" text-anchor="middle" font-size="12" fill="#9aa0a6">searches 7 fields per title</text>
+
+  <line x1="930" y1="215" x2="990" y2="215" stroke="#fafafa" stroke-width="2.5"/>
+  <polygon points="990,207 990,223 1008,215" fill="#fafafa"/>
+
+  <!-- 4. Filters -->
+  <rect x="1010" y="130" width="230" height="170" rx="14" fill="#161b22" stroke="#b27eff" stroke-width="2.5"/>
+  <text x="1125" y="163" text-anchor="middle" font-size="18" font-weight="bold" fill="#b27eff">4. Filters</text>
+  <text x="1125" y="190" text-anchor="middle" font-size="13" fill="#fafafa">Type · Genre · Rating</text>
+  <text x="1125" y="211" text-anchor="middle" font-size="13" fill="#fafafa">Country · Year · Length</text>
+  <text x="1125" y="232" text-anchor="middle" font-size="13" fill="#fafafa">options built from the data</text>
+  <text x="1125" y="253" text-anchor="middle" font-size="13" fill="#fafafa">impossible combos explained</text>
+  <text x="1125" y="279" text-anchor="middle" font-size="12" fill="#9aa0a6">one click resets everything</text>
+
+  <line x1="1125" y1="300" x2="1125" y2="345" stroke="#fafafa" stroke-width="2.5"/>
+  <polygon points="1117,345 1133,345 1125,363" fill="#fafafa"/>
+
+  <!-- 5. Three views -->
+  <rect x="380" y="370" width="860" height="130" rx="14" fill="#161b22" stroke="#4caf7d" stroke-width="2.5"/>
+  <text x="810" y="403" text-anchor="middle" font-size="18" font-weight="bold" fill="#4caf7d">5. One answer, three views</text>
+  <text x="565" y="435" text-anchor="middle" font-size="14" fill="#3d9df3" font-weight="bold">📋 Title Table</text>
+  <text x="565" y="458" text-anchor="middle" font-size="12" fill="#9aa0a6">scan every match, sort, compact cards</text>
+  <text x="810" y="435" text-anchor="middle" font-size="14" fill="#b27eff" font-weight="bold">🎯 Title Snapshot</text>
+  <text x="810" y="458" text-anchor="middle" font-size="12" fill="#9aa0a6">one title's complete record</text>
+  <text x="1060" y="435" text-anchor="middle" font-size="14" fill="#4caf7d" font-weight="bold">📊 Catalog Overview</text>
+  <text x="1060" y="458" text-anchor="middle" font-size="12" fill="#9aa0a6">charts of the current selection</text>
+
+  <line x1="380" y1="435" x2="310" y2="435" stroke="#fafafa" stroke-width="2.5"/>
+  <polygon points="310,427 310,443 292,435" fill="#fafafa"/>
+
+  <!-- 6. Export -->
+  <rect x="60" y="370" width="230" height="130" rx="14" fill="#161b22" stroke="#4caf7d" stroke-width="2.5"/>
+  <text x="175" y="403" text-anchor="middle" font-size="18" font-weight="bold" fill="#4caf7d">6. Export</text>
+  <text x="175" y="430" text-anchor="middle" font-size="13" fill="#fafafa">labeled CSV, all 12 columns</text>
+  <text x="175" y="452" text-anchor="middle" font-size="13" fill="#fafafa">filename = search + filters + date</text>
+  <text x="175" y="474" text-anchor="middle" font-size="13" fill="#fafafa">opens in Excel or Sheets</text>
+
+  <!-- URL note -->
+  <rect x="380" y="540" width="860" height="60" rx="12" fill="#12233a" stroke="#3d9df3" stroke-width="1.5"/>
+  <text x="810" y="565" text-anchor="middle" font-size="14" fill="#3d9df3" font-weight="bold">The page address carries the whole view</text>
+  <text x="810" y="586" text-anchor="middle" font-size="13" fill="#9aa0a6">search, filters, sort, and layout all live in the URL, so any result set can be bookmarked or shared</text>
+</svg>
