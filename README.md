@@ -34,4 +34,6 @@ streamlit run app.py
 
 The app runs on the real Netflix catalog (`data/netflix_titles.csv`): 8,807 titles from the [Kaggle netflix-shows open dataset](https://www.kaggle.com/datasets/shivamb/netflix-shows), covering Netflix's US catalog through September 2021. In Week 3 I built against a fictional 40-title sample (`sample_data/sample_catalog.csv`, still in the repo) whose columns mirror the real dataset exactly — which is why swapping in the real data in Week 4 required no code changes.
 
+One known limit worth naming: the uploader reads the raw dataset column names above, while the app's own exported reports use friendly labels (Title, Year, Length, Genre). That means an exported report can't be re-uploaded as a catalog yet — the columns won't be recognized and will show blank. Accepting the export's headers as aliases is on the roadmap.
+
 The raw CSV is never edited. Cleaning happens in code on every load: release_year converts to numeric, blank cells stay null and empty fields are hidden in the display, three source rows with duration misfiled into the rating column are repaired, and search matches singular and plural word forms. Several of these fixes came directly from peer testing and from checking the app's counts against the same data loaded into Snowflake with SQL.
