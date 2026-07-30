@@ -474,6 +474,36 @@ if results.empty:
             icon="⏱️",
         )
         diagnosed = True
+    if not diagnosed and active:
+        # The search works and the filters are what killed it: say so,
+        # and put the escape right here instead of below the sidebar fold.
+        would_match = (
+            len(search_catalog(catalog, query.strip()))
+            if query.strip() else len(catalog)
+        )
+        if would_match:
+            if query.strip():
+                st.info(
+                    f"{would_match:,} title{'s' if would_match != 1 else ''} "
+                    "match your search, but the active filters exclude all "
+                    "of them.",
+                    icon="🧹",
+                )
+            else:
+                st.info(
+                    "The active filters exclude every title in the catalog.",
+                    icon="🧹",
+                )
+            st.button(
+                "Clear filters",
+                key="clear_filters_main",
+                on_click=reset_filters,
+                args=(
+                    (int(years.min()), int(years.max())) if year_range is not None else None,
+                    int(minutes.max()) if len(minutes) else None,
+                ),
+            )
+            diagnosed = True
     if query.strip():
         suggestion = suggest_query(query.strip(), build_vocabulary(catalog))
         # Only offer a suggestion that actually returns matches, so the
