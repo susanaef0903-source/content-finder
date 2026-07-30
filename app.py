@@ -473,6 +473,15 @@ if results.empty:
             "keeps only TV shows, so nothing can match. Clear one of the two.",
             icon="⏱️",
         )
+        st.button(
+            "Clear filters",
+            key="clear_filters_cap",
+            on_click=reset_filters,
+            args=(
+                (int(years.min()), int(years.max())) if year_range is not None else None,
+                int(minutes.max()) if len(minutes) else None,
+            ),
+        )
         diagnosed = True
     if not diagnosed and active:
         # The search works and the filters are what killed it: say so,
@@ -594,6 +603,12 @@ else:
                     slug_bits.append(
                         re.sub(r"[^a-z0-9]+", "-", "-".join(chosen_filter).lower()).strip("-")
                     )
+            # The numeric filters mark the filename too, so two exports
+            # with different caps can never collide on disk.
+            if year_range and (year_range[0] > int(years.min()) or year_range[1] < int(years.max())):
+                slug_bits.append(f"{year_range[0]}-{year_range[1]}")
+            if max_length is not None and len(minutes) and max_length < int(minutes.max()):
+                slug_bits.append(f"{max_length}min")
             slug = "_".join(slug_bits)[:60].strip("_-") or "all-titles"
             st.download_button(
                 "⬇️ Download these results as a report (CSV)",
@@ -744,6 +759,14 @@ else:
                 chart_years.value_counts().sort_index()
                 .rename_axis("year").reset_index(name="titles")
             )
+            # On small selections, pin ticks to whole numbers so the
+            # axis never prints 0, 1, 1 from rounded half-steps.
+            max_titles = int(year_counts["titles"].max())
+            y_axis = alt.Axis(format="d", title=None)
+            if max_titles <= 10:
+                y_axis = alt.Axis(
+                    format="d", title=None, values=list(range(max_titles + 1))
+                )
             st.altair_chart(
                 alt.Chart(year_counts)
                 .mark_bar(color="#3d9df3")
@@ -753,10 +776,7 @@ else:
                         axis=alt.Axis(format="d", title=None),
                         scale=alt.Scale(nice=False),
                     ),
-                    y=alt.Y(
-                        "titles:Q",
-                        axis=alt.Axis(format="d", title=None, tickMinStep=1),
-                    ),
+                    y=alt.Y("titles:Q", axis=y_axis),
                 ),
                 use_container_width=True,
             )
@@ -771,14 +791,17 @@ else:
                 genres.value_counts().head(10)
                 .rename_axis("genre").reset_index(name="titles")
             )
+            max_genre = int(genre_counts["titles"].max())
+            g_axis = alt.Axis(format="d", title=None)
+            if max_genre <= 10:
+                g_axis = alt.Axis(
+                    format="d", title=None, values=list(range(max_genre + 1))
+                )
             st.altair_chart(
                 alt.Chart(genre_counts)
                 .mark_bar(color="#b27eff")
                 .encode(
-                    x=alt.X(
-                        "titles:Q",
-                        axis=alt.Axis(format="d", title=None, tickMinStep=1),
-                    ),
+                    x=alt.X("titles:Q", axis=g_axis),
                     y=alt.Y("genre:N", sort="-x", title=None),
                 ),
                 use_container_width=True,
