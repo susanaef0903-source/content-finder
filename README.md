@@ -4,6 +4,8 @@ A search tool for content coordinators who manage large streaming catalogs.
 
 **Live app:** https://sue-content-finder.streamlit.app/
 
+![Searching 8,807 real Netflix titles in the Title Table view](docs/screenshot-title-table.png)
+
 Built by **Susana Rivera** for Pursuit Cycle 2 (build-for-a-role project — Role: Content Coordinator at StreamVault).
 
 ## The Problem
@@ -13,6 +15,8 @@ The content coordinator struggles with manually digging through a massive volume
 ## The Solution
 
 Content Finder lets the coordinator type what they're looking for — a title, genre, year, country, or keyword — and instantly see the best matches with clear previews. No more scrolling through spreadsheets. Results can be exported as a report for meetings.
+
+![One title's complete record in the Title Snapshot view](docs/screenshot-title-snapshot.png)
 
 ## MVP User Flow
 
