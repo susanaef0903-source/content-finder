@@ -69,6 +69,12 @@ def load_catalog(uploaded_file=None) -> pd.DataFrame:
         df["duration"].astype(str).str.extract(r"(\d+)\s*min", expand=False),
         errors="coerce",
     )
+    # When was each title added, as a quarter ("Q3 2021"), so additions
+    # can be pulled up per quarter. Unparseable dates become blank.
+    added = pd.to_datetime(df["date_added"].astype(str).str.strip(), errors="coerce")
+    df["added_quarter"] = added.map(
+        lambda d: f"Q{((d.month - 1) // 3) + 1} {d.year}" if pd.notna(d) else ""
+    )
     df["release_year"] = pd.to_numeric(df["release_year"], errors="coerce")
     return df
 
@@ -277,6 +283,22 @@ all_countries = sorted(
 seed_list_from_url("country_f", "country", all_countries)
 country_filter = st.sidebar.multiselect("Country", all_countries, key="country_f")
 
+
+def quarter_key(label: str):
+    q, year = label.split()
+    return (int(year), int(q[1]))
+
+
+quarter_options = ["Any time"] + sorted(
+    {q for q in catalog["added_quarter"] if q}, key=quarter_key, reverse=True
+)
+if "added_f" not in st.session_state and st.query_params.get("added") in quarter_options:
+    st.session_state.added_f = st.query_params["added"]
+added_filter = st.sidebar.selectbox(
+    "Added during", quarter_options, key="added_f",
+    help="Titles added to the catalog in that quarter.",
+)
+
 years = catalog["release_year"].dropna()
 if len(years) and years.min() < years.max():
     y_lo, y_hi = int(years.min()), int(years.max())
@@ -321,6 +343,7 @@ def reset_filters(year_bounds, length_max):
     st.session_state.genre_f = []
     st.session_state.rating_f = []
     st.session_state.country_f = []
+    st.session_state.added_f = "Any time"
     if year_bounds is not None:
         st.session_state.year_f = year_bounds
     if length_max is not None:
@@ -381,6 +404,8 @@ if country_filter:
             lambda cell: any(c in cell for c in country_filter)
         )
     ]
+if added_filter != "Any time":
+    results = results[results["added_quarter"] == added_filter]
 if year_range:
     results = results[
         results["release_year"].between(year_range[0], year_range[1], inclusive="both")
@@ -407,12 +432,25 @@ if rating_filter:
     active.append("Rating: " + ", ".join(rating_filter))
 if country_filter:
     active.append("Country: " + ", ".join(country_filter))
+if added_filter != "Any time":
+    active.append("Added in " + added_filter)
 if year_range and (year_range[0] > int(years.min()) or year_range[1] < int(years.max())):
     active.append(f"Years {year_range[0]} to {year_range[1]}")
 if max_length is not None and len(minutes) and max_length < int(minutes.max()):
     active.append(f"Movies up to {max_length} min")
 if active:
     st.caption("Active filters: " + " · ".join(active))
+if added_filter != "Any time":
+    # The quarter's additions as a share of the whole catalog, so the
+    # answer to "what came in this quarter" arrives with its context.
+    quarter_total = int((catalog["added_quarter"] == added_filter).sum())
+    quarter_pct = quarter_total / len(catalog) * 100
+    st.info(
+        f"{added_filter}: {quarter_total:,} title"
+        f"{'s were' if quarter_total != 1 else ' was'} added to the "
+        f"catalog, {quarter_pct:.1f}% of all {len(catalog):,} titles.",
+        icon="🗓️",
+    )
 
 # Seed sort and view from the address BEFORE the write-back below
 # strips unknown parameters; their widgets render later in the page.
@@ -439,6 +477,8 @@ if rating_filter:
     url_state["rating"] = ",".join(rating_filter)
 if country_filter:
     url_state["country"] = ",".join(country_filter)
+if added_filter != "Any time":
+    url_state["added"] = added_filter
 if year_range and (year_range[0] > int(years.min()) or year_range[1] < int(years.max())):
     url_state["year"] = f"{year_range[0]}-{year_range[1]}"
 if max_length is not None and len(minutes) and max_length < int(minutes.max()):
@@ -603,6 +643,8 @@ else:
                     slug_bits.append(
                         re.sub(r"[^a-z0-9]+", "-", "-".join(chosen_filter).lower()).strip("-")
                     )
+            if added_filter != "Any time":
+                slug_bits.append(added_filter.lower().replace(" ", "-"))
             # The numeric filters mark the filename too, so two exports
             # with different caps can never collide on disk.
             if year_range and (year_range[0] > int(years.min()) or year_range[1] < int(years.max())):
